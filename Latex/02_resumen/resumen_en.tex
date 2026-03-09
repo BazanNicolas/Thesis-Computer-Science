@@ -1,0 +1,8 @@
+Brain age estimation from neuroimaging data enables the quantification of brain aging and the detection of deviations associated with neurodegenerative diseases. The difference between predicted and chronological age ---the brain age gap--- constitutes a potential biomarker of accelerated aging.
+
+This work proposes a multimodal pipeline that integrates resting-state fMRI functional connectivity, compressed via a $\beta$-VAE, with T1-weighted gray matter volumes to predict brain age using XGBoost. The pipeline was evaluated on $N = 1{,}245$ subjects from the multicentric Latin American cohort RedLaT, achieving a mean absolute error (MAE) of 5.62 years. Integrating both modalities outperformed using either one alone, and dimensionality reduction proved more important than the choice between linear and nonlinear methods or among regressor families.
+
+The impact of demographic variables ---years of education and acquisition site--- on prediction and the brain age gap was also analyzed. Including these variables as additional features reduced the MAE to 5.17 years, while the acquisition site emerged as the main confounder across centers. Evaluation of the pipeline as a biomarker through training exclusively on cognitively normal subjects showed promising signals when incorporating demographic information, although the available sample size limited clinical applicability. The pipeline is modular and reusable, facilitating its adaptation to larger cohorts and the incorporation of new variables.
+
+\vspace{1em}
+\noindent\textbf{Keywords:} brain age, neuroimaging, functional connectivity, fMRI, variational autoencoder, XGBoost, multimodal data, brain age gap, demographic variables, Latin American cohort.

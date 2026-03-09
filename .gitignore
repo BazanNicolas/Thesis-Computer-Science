@@ -1,0 +1,63 @@
+# Data files
+Data/
+
+# Generated artifacts
+Outputs/
+
+# Legacy artifacts
+legacy/
+
+# Virtual environment
+.tesis-final-venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Personal documentation
+Documentacion/
+
+# Manim: media (videos, partial_movie_files, texts, Tex cache, concat_list.txt)
+Animations/media/
+# Por si se ejecuta manim desde la raíz del repo
+media/
+
+# LaTeX: solo se ignoran artefactos de compilación (se versionan .tex y recursos)
+Latex/presentacion/script_presentacion.md
+# Si se compila desde la raíz del repo, no versionar main.*
+/main.log
+/main.aux
+/main.pdf
+Latex/**/*.aux
+Latex/**/*.bbl
+Latex/**/*.blg
+Latex/**/*.fdb_latexmk
+Latex/**/*.fls
+Latex/**/*.glo
+Latex/**/*.lof
+Latex/**/*.lot
+Latex/**/*.log
+Latex/**/*.lol
+Latex/**/*.out
+Latex/**/*.synctex.gz
+Latex/**/*.toc
+Latex/**/*.acn
+Latex/**/*.xdy
+Latex/**/*.luabridge.lua
+Latex/**/*.nav
+Latex/**/*.snm
+Latex/**/*.vrb
+Latex/**/*.pdf
+Latex/**/build/

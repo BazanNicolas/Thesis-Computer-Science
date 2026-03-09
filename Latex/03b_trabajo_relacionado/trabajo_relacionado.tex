@@ -1,0 +1,83 @@
+\chapter{Trabajo relacionado}
+\label{chapter:trabajo_relacionado}
+
+En este capítulo se revisa la literatura sobre estimación de edad cerebral a partir de datos de neuroimagen. Si bien el concepto de edad cerebral surgió originalmente como biomarcador clínico, los trabajos revisados abarcan contribuciones diversas: desde avances en métodos de predicción y arquitecturas de modelos hasta la integración de múltiples modalidades y el estudio de poblaciones subrepresentadas. La revisión está organizada según la modalidad de datos utilizada: MRI estructural, conectividad funcional, o combinaciones de ambas. También se incluyen estudios realizados en poblaciones latinoamericanas, por su relevancia directa con la cohorte de este trabajo. Al final del capítulo se presenta una tabla comparativa y se discute cómo se relaciona el presente trabajo con la literatura existente.
+
+\section{Estimación de la edad cerebral como biomarcador}
+
+La idea de estimar la edad de una persona a partir de imágenes de su cerebro fue formalizada por Franke et al. \cite{franke2010estimating} con el framework \textit{BrainAGE} (Brain Age Gap Estimation). El método consiste en entrenar un modelo de regresión sobre imágenes cerebrales de sujetos sanos para que aprenda a predecir su edad cronológica. Una vez entrenado, el modelo puede aplicarse a un sujeto nuevo: si la edad que predice es mayor que la edad real, se interpreta que el cerebro de esa persona muestra signos de envejecimiento acelerado. A la diferencia entre la edad predicha y la cronológica se la conoce como \textit{brain age gap}.
+
+En su trabajo original, Franke et al. utilizaron una máquina de vectores de relevancia (RVM) sobre mapas de materia gris derivados de imágenes T1w, reducidos previamente con PCA. El modelo fue evaluado sobre más de 650 sujetos sanos de entre 19 y 86 años, adquiridos en múltiples escáneres, y obtuvo un MAE de aproximadamente 5 años con una correlación de $r = 0{,}92$ entre la edad predicha y la cronológica.
+
+En los años siguientes, el brain age gap se aplicó al estudio de diversas condiciones neurológicas y psiquiátricas. Franke y Gaser \cite{franke2019ten} publicaron una revisión a diez años del framework BrainAGE, documentando su uso en enfermedad de Alzheimer, deterioro cognitivo leve, esquizofrenia, epilepsia y otras condiciones. En la mayoría de estos estudios, los pacientes presentan un brain age gap positivo, es decir, el modelo les asigna una edad cerebral mayor que la cronológica. Además, trabajos longitudinales como el de Jonsson et al. \cite{jonsson2019brain} han mostrado que un brain age gap elevado se asocia con deterioro cognitivo posterior y mayor riesgo de mortalidad.
+
+\section{Enfoques basados en MRI estructural}
+
+La mayoría de los trabajos en estimación de edad cerebral utilizan imágenes T1w como única fuente de datos. Los avances en esta línea se caracterizaron por el paso de métodos clásicos de aprendizaje automático a arquitecturas de deep learning, acompañado de un aumento en el tamaño de las cohortes de entrenamiento.
+
+Cole et al. \cite{cole2017predicting} fueron de los primeros en usar redes neuronales convolucionales 3D directamente sobre mapas de materia gris. Su modelo, entrenado sobre $N = 2001$ adultos sanos, alcanzó un MAE de 4,16 años ($r = 0{,}96$). Un aspecto destacado del trabajo fue mostrar que el brain age gap es reproducible entre sesiones de escaneo y tiene un componente genético, lo que refuerza su valor como indicador biológico.
+
+Bashyam et al. \cite{bashyam2020mri} trabajaron a una escala mayor, entrenando una red convolucional 2D sobre 14\,468 individuos de múltiples sitios. El modelo, que opera sobre cortes 2D de T1w con preprocesamiento mínimo, obtuvo un MAE de aproximadamente 3,7 años. Un resultado interesante fue que un modelo que no sobreajustara demasiado a los sujetos sanos resultaba más útil para distinguir pacientes con Alzheimer de controles, ya que capturaba mejor la variabilidad asociada a la patología.
+
+Peng et al. \cite{peng2021accurate} propusieron una arquitectura ligera llamada SFCN (\textit{Simple Fully Convolutional Network}), diseñada para que los volúmenes 3D puedan procesarse sin exceder la memoria GPU. Con datos del UK Biobank obtuvo un MAE inferior a 3 años y ganó el desafío PAC 2019 de predicción de edad cerebral, mostrando que no siempre es necesario recurrir a redes complejas si la cohorte de entrenamiento es suficientemente grande.
+
+Kim et al. \cite{kim2025novel} abordaron un problema práctico: las imágenes de investigación son volumétricas en 3D, pero en la práctica clínica rutinaria se adquieren escaneos 2D axiales. Los autores entrenaron un modelo DenseNet-169 3D sobre 8\,681 escaneos de investigación, pero generando versiones 2D simuladas de los mismos para que el modelo aprenda a manejar esa degradación. Evaluado sobre 175 sujetos sanos con escaneos clínicos 2D reales, el modelo alcanzó un MAE de 2,73 años tras corregir el sesgo por edad. El brain age gap resultó significativamente mayor en pacientes con Alzheimer ($p < 0{,}001$) y se asoció con la progresión de la enfermedad.
+
+Estos trabajos comparten una limitación: al usar solo información estructural, no capturan la organización funcional del cerebro, que puede verse alterada antes de que aparezcan cambios anatómicos detectables.
+
+\section{Enfoques basados en conectividad funcional}
+
+Otra línea de investigación ha explorado la predicción de edad cerebral a partir de conectividad funcional derivada de fMRI en estado de reposo. Aunque esta línea es más reciente y menos explorada, presenta el interés de poder capturar patrones de comunicación entre regiones cerebrales que pueden alterarse de forma temprana en procesos neurodegenerativos \cite{smitha2017resting}.
+
+El trabajo de Gao et al. \cite{gao2023brain} es particularmente relevante para este trabajo. Los autores utilizaron matrices de conectividad funcional derivadas del atlas AAL de 116 regiones (los mismos datos de entrada que en el presente trabajo) y las modelaron como grafos para entrenar una red neuronal de grafos (GNN) con mecanismo de atención. Utilizando datos de la base ADNI (471 controles sanos, validación cruzada de 10 folds), su modelo obtuvo un MAE de 5,92 años con una correlación de Pearson de 0,44. En el mismo estudio se compararon otros modelos sobre los mismos datos: SVR obtuvo un MAE de 6,38, LASSO (un método de regresión lineal con regularización L1) obtuvo 6,03, Random Forest obtuvo 6,14, y un autoencoder convencional obtuvo 7,65. Al aplicar el modelo a pacientes con Alzheimer, el brain age gap fue significativamente mayor que en controles, y las regiones más influyentes en la predicción incluyeron el hipocampo, la circunvolución parahipocampal y la amígdala.
+
+En general, los estudios que usan solo conectividad funcional tienden a obtener errores más altos que los basados en MRI estructural. Esto puede deberse a que la señal BOLD es inherentemente más ruidosa y variable entre sesiones que los volúmenes de materia gris. Aun así, hay evidencia de que la conectividad funcional puede ser más sensible a cambios preclínicos asociados a la neurodegeneración, lo que motiva su uso como modalidad complementaria.
+
+\section{Enfoques multimodales}
+
+Dado que la información estructural y funcional reflejan aspectos distintos del envejecimiento cerebral, varios estudios han combinado ambas modalidades.
+
+Liem et al. \cite{liem2017predicting} combinaron anatomía cortical (grosor cortical, área de superficie) con conectividad funcional de todo el cerebro, usando un esquema de \textit{stacking} (un método de ensamble que combina las predicciones de varios modelos base mediante un meta-modelo). Trabajando con $N = 2354$ adultos del estudio CamCAN (edades 19--82), el modelo multimodal obtuvo un MAE de 4,29 años, por debajo de lo que conseguían los modelos con una sola modalidad. Además, el brain age gap se asoció con deterioro cognitivo, y el modelo generalizó razonablemente a un conjunto independiente de otro sitio ($N = 475$).
+
+Millar et al. \cite{millar2023multimodal} entrenaron tres modelos separados (basados en FC, MRI estructural, y la combinación de ambos) sobre 390 participantes cognitivamente normales que no presentaban acumulación de proteína amiloide en el cerebro (un marcador biológico asociado a la enfermedad de Alzheimer). Luego evaluaron los modelos sobre cohortes que sí tenían amiloide o deterioro cognitivo. Los resultados mostraron un patrón diferencial: el brain age gap basado en FC se redujo en los sujetos con amiloide preclínico (es decir, sin síntomas aún), posiblemente reflejando mecanismos compensatorios tempranos, mientras que el brain age gap estructural capturó la progresión en etapas más avanzadas. Esto indica que ambas modalidades aportan información complementaria sobre la trayectoria de la enfermedad.
+
+Dufumier et al. \cite{dufumier2024multi} propusieron el M-AVAE (\textit{Multi-Task Adversarial Variational Autoencoder}), una arquitectura que integra MRI estructural y funcional mediante un autoencoder variacional. El modelo organiza su espacio latente separando lo que es común a ambas modalidades de lo que es específico de cada una, e incluye la clasificación de sexo como tarea auxiliar. Fue evaluado sobre el dataset OpenBHB, que agrupa $N = 5330$ sujetos sanos de 71 sitios de adquisición (edades 6--88), y obtuvo un MAE de 2,77 años. Este trabajo es conceptualmente el más cercano al presente estudio, ya que ambos usan un autoencoder variacional para obtener representaciones latentes a partir de datos multimodales. La diferencia principal es que el M-AVAE es un modelo end-to-end (representación y predicción en una sola red), mientras que en este trabajo el $\beta$-VAE se entrena de forma independiente para comprimir las matrices de FC, y sus embeddings se combinan con features estructurales para alimentar un modelo XGBoost por separado.
+
+\section{Estudios en poblaciones latinoamericanas}
+
+La gran mayoría de los trabajos revisados hasta aquí utilizan datos de Europa, Estados Unidos o Japón. Esto plantea la pregunta de si los modelos entrenados en esas poblaciones son igualmente válidos para otras regiones con perfiles socioeconómicos, ambientales y genéticos distintos.
+
+Moguilner et al. \cite{moguilner2024brain} abordaron esta cuestión en un estudio publicado en Nature Medicine, analizando datos de 5\,306 participantes de 15 países. De estos, 7 son de América Latina y el Caribe (LAC): Argentina, Chile, Colombia, México, Perú, Brasil y Cuba. Los autores utilizaron redes convolucionales de grafos (GCN) sobre matrices de conectividad funcional derivadas del atlas AAL, obtenidas tanto de fMRI como de electroencefalografía (EEG, una técnica que mide la actividad eléctrica del cerebro desde el cuero cabelludo). Los modelos entrenados sobre datos LAC mostraron mayor error que los entrenados sobre datos de otras regiones (RMSE de 11,91 frente a 8,66 para fMRI), y un sesgo hacia edades predichas mayores. Los autores encontraron que la desigualdad socioeconómica, la contaminación ambiental y las disparidades en salud eran predictores significativos de ese mayor brain age gap en LAC ($R^2 = 0{,}37$). Además, las mujeres con Alzheimer de LAC presentaron brain age gaps significativamente mayores que los hombres del mismo grupo. Este estudio es directamente relevante para el presente trabajo, ya que comparte el contexto geográfico (datos latinoamericanos), el atlas de parcelación (AAL), y la inclusión de pacientes con Alzheimer y demencia frontotemporal.
+
+El proyecto BrainLat \cite{brainlat2023} publicó en 2023 el primer dataset multimodal de neuroimagen orientado específicamente al estudio de la neurodegeneración en América Latina. El dataset comprende 780 participantes de cinco países de la región e incluye MRI anatómico, fMRI, MRI de difusión y EEG de alta densidad. De ellos, 530 presentan enfermedades neurodegenerativas (Alzheimer, demencia frontotemporal, esclerosis múltiple y Parkinson) y 250 son controles sanos. La existencia de este tipo de recursos refuerza la importancia de desarrollar y evaluar pipelines de neuroimagen sobre datos de la región.
+
+\section{Síntesis y posicionamiento del presente trabajo}
+
+La Tabla~\ref{tab:related_work} resume los trabajos revisados, comparando la modalidad de datos, el modelo utilizado, el tamaño de la cohorte y el rendimiento reportado.
+
+\begin{table}[H]
+\centering
+\caption{Comparación de trabajos representativos en estimación de edad cerebral. Se indica la modalidad de datos, el modelo principal, el tamaño de la cohorte y el MAE en test cuando está disponible. $N$ corresponde al tamaño total de la cohorte utilizada en cada estudio (no necesariamente el tamaño de entrenamiento). Los trabajos sin MAE reportan otras métricas o no publican este valor de forma directamente comparable.}
+\label{tab:related_work}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllr}
+\toprule
+\textbf{Trabajo} & \textbf{Modalidad} & \textbf{Modelo} & \textbf{$N$} & \textbf{MAE} \\
+\midrule
+Franke et al. (2010) & T1w (GM) & RVM + PCA & 650 & 5,00 \\
+Cole et al. (2017) & T1w (GM) & 3D CNN & 2\,001 & 4,16 \\
+Liem et al. (2017) & T1w + FC & Stacking & 2\,354 & 4,29 \\
+Bashyam et al. (2020) & T1w & 2D CNN & 14\,468 & $\sim$3,7 \\
+Peng et al. (2021) & T1w & SFCN & UK Biobank & $<$3 \\
+Gao et al. (2023) & FC (fMRI) & GNN & 471 & 5,92 \\
+Millar et al. (2023) & FC + T1w & GPR & 390 & --- \\
+Moguilner et al. (2024) & FC (fMRI/EEG) & GCN & 5\,306 & --- \\
+Dufumier et al. (2024) & T1w + FC & M-AVAE & 5\,330 & 2,77 \\
+Kim et al. (2025) & T1w & DenseNet-169 & 8\,681 & 2,73 \\
+\midrule
+\textbf{Presente trabajo} & \textbf{FC + T1w} & $\boldsymbol{\beta}$\textbf{-VAE + XGBoost} & \textbf{1\,245} & \textbf{5,62} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+El presente trabajo se sitúa en la intersección de varias de las líneas revisadas. En primer lugar, se trata de un enfoque multimodal que combina conectividad funcional y datos estructurales T1w, en la línea de Liem et al. y Dufumier et al. En segundo lugar, al igual que Gao et al. y Moguilner et al., se utilizan matrices de conectividad funcional del atlas AAL de 116 regiones como fuente de datos funcionales. Sin embargo, mientras que esos trabajos modelan las matrices como grafos para redes GNN o GCN, aquí se opta por vectorizar el triángulo superior de la matriz y aplicar reducción de dimensionalidad no lineal mediante un $\beta$-VAE. La arquitectura del M-AVAE de Dufumier et al. es la más cercana conceptualmente, ya que también emplea un autoencoder variacional para aprender representaciones latentes de datos multimodales. La diferencia es que el M-AVAE integra representación y predicción en una sola red, mientras que en este trabajo el $\beta$-VAE y el modelo de predicción (XGBoost) se entrenan por separado, lo que permite realizar estudios de ablación sobre la contribución de cada modalidad y simplifica la interpretación de los resultados. Por último, la cohorte utilizada proviene de la Red Latinoamericana de Investigación en Neurodegeneración (RedLaT), lo que conecta con los hallazgos de Moguilner et al. sobre las particularidades del envejecimiento cerebral en poblaciones latinoamericanas. Con $N = 1245$ sujetos que incluyen controles sanos, pacientes con Alzheimer y pacientes con demencia frontotemporal, el MAE de 5,62 años obtenido se encuentra dentro del rango que reportan estudios de tamaño comparable basados en conectividad funcional (por ejemplo, el MAE de 5,92 de Gao et al. con 471 sujetos).

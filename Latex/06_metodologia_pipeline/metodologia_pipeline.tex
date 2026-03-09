@@ -1,0 +1,413 @@
+\chapter{Metodología y pipeline de análisis}
+\label{chapter:metodologia_pipeline}
+
+En este capítulo se describe en detalle el pipeline desarrollado para la estimación de la edad cerebral a partir de datos multimodales de neuroimagen. El diseño del pipeline responde a los conceptos teóricos presentados en el Capítulo~\ref{chapter:marco_teorico} y opera sobre la cohorte descrita en el Capítulo~\ref{chapter:datos_cohorte}. A lo largo de las secciones siguientes se presentan las decisiones de diseño adoptadas en cada etapa, junto con su justificación técnica.
+
+\section{Visión general del pipeline}
+\label{sec:pipeline_overview}
+
+El pipeline propuesto sigue una arquitectura en dos etapas: una primera etapa de reducción de dimensionalidad no supervisada, donde un autoencoder variacional comprime las matrices de conectividad funcional en representaciones latentes compactas, y una segunda etapa de predicción supervisada, donde un modelo XGBoost recibe las representaciones latentes junto con datos estructurales T1w para predecir la edad del sujeto.
+
+La Figura~\ref{fig:pipeline_general} presenta un diagrama general del flujo de procesamiento.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.4cm and 1.2cm,
+    block/.style={
+        rectangle, draw, rounded corners,
+        text width=3.2cm, minimum height=1cm,
+        align=center, font=\small
+    },
+    data/.style={
+        rectangle, draw, dashed, rounded corners,
+        text width=2.8cm, minimum height=0.8cm,
+        align=center, font=\small, fill=gray!10
+    },
+    arrow/.style={-{Stealth[length=3mm]}, thick}
+]
+
+% Row 1: Data sources
+\node[data] (fc) {Matrices FC\\(116$\times$116)};
+\node[data, right=2.5cm of fc] (t1w) {Volúmenes T1w\\(116 regiones)};
+
+% Row 2: Preprocessing
+\node[block, below=of fc] (preproc) {Fisher $z$ +\\vectorización\\(6670 dims)};
+
+% Row 3: VAE
+\node[block, below=of preproc] (vae) {$\beta$-VAE\\Encoder};
+\node[data, below=of vae] (emb) {Embeddings $\mu$\\(64 dims)};
+
+% Row 4: Concatenation
+\node[block, below=1.8cm of emb, xshift=1.3cm] (concat) {Concatenación\\de features\\(180 dims)};
+
+% Row 5: XGBoost
+\node[block, below=of concat] (xgb) {XGBoost\\Regressor};
+
+% Row 6: Output
+\node[data, below=of xgb] (pred) {Edad predicha\\$\hat{y}$};
+
+% Arrows
+\draw[arrow] (fc) -- (preproc);
+\draw[arrow] (preproc) -- (vae);
+\draw[arrow] (vae) -- (emb);
+\draw[arrow] (emb) -- (concat);
+\draw[arrow] (t1w) |- (concat);
+\draw[arrow] (concat) -- (xgb);
+\draw[arrow] (xgb) -- (pred);
+
+\end{tikzpicture}
+\caption{Diagrama general del pipeline de estimación de edad cerebral. Las matrices de conectividad funcional se comprimen mediante un $\beta$-VAE en representaciones latentes de 64 dimensiones. Estas se concatenan con 116 features estructurales T1w para alimentar un modelo XGBoost que predice la edad.}
+\label{fig:pipeline_general}
+\end{figure}
+
+La combinación de ambas modalidades busca capturar información complementaria sobre el envejecimiento cerebral: la conectividad funcional refleja patrones de comunicación entre regiones, mientras que los volúmenes T1w aportan información sobre la estructura anatómica del cerebro. Esta estrategia multimodal está motivada por evidencia previa que sugiere que ambas fuentes contribuyen de manera diferente a la predicción de la edad cerebral \cite{erus2015imaging, groves2012benefits}.
+
+\section{Preprocesamiento de los datos}
+\label{sec:preprocesamiento}
+
+\subsection{Vectorización y transformación de las matrices de conectividad funcional}
+
+Como se describió en el Capítulo~\ref{chapter:marco_teorico}, cada sujeto dispone de una matriz de conectividad funcional de $116 \times 116$. Dado que esta matriz es simétrica y la diagonal no aporta información, se extrae el triángulo superior sin diagonal, obteniendo un vector de $\frac{116 \times 115}{2} = 6670$ valores por sujeto.
+
+Antes de utilizar estos vectores como entrada del modelo, se aplica la transformación Fisher $z$ (véase la Sección~\ref{sec:fisher_z} del Capítulo~\ref{chapter:marco_teorico}), que convierte los coeficientes de correlación en valores con distribución aproximadamente normal sobre toda la recta real. Esta transformación es una práctica estándar en el análisis de conectividad funcional en neuroimagen \cite{fisher1921probable} y favorece la estabilidad numérica durante el entrenamiento de las redes neuronales.
+
+\subsection{Datos estructurales T1w}
+
+Los datos estructurales T1w comprenden los 116 volúmenes regionales de materia gris descritos en el Capítulo~\ref{chapter:datos_cohorte}.
+
+Durante la construcción de la cohorte se identificó que algunos sujetos presentaban múltiples entradas en los datos T1w, correspondientes a distintas sesiones de escaneo. Para resolver esta duplicidad se promedian las columnas numéricas de todas las entradas asociadas a un mismo sujeto. Esta decisión es conservadora y evita introducir criterios arbitrarios sobre cuál sesión es más representativa.
+
+\section{División de los datos}
+\label{sec:division_datos}
+
+En este trabajo se emplean dos niveles de separación, cuyas bases conceptuales se presentan en la Sección~\ref{sec:validacion_evaluacion} del Capítulo~\ref{chapter:marco_teorico}: una partición holdout para la evaluación final y una validación cruzada $K$-Fold para la selección de hiperparámetros.
+
+\subsection{Partición holdout estratificada}
+
+Los $N = 1245$ sujetos de la cohorte se dividen en dos conjuntos disjuntos:
+\begin{itemize}
+    \item \textbf{Trainval} (90\%, $n = 1120$): utilizado para el entrenamiento de modelos y la selección de hiperparámetros.
+    \item \textbf{Test} (10\%, $n = 125$): reservado exclusivamente para la evaluación final. Este conjunto no participa en ninguna decisión de diseño ni de optimización.
+\end{itemize}
+
+La partición se realiza mediante muestreo estratificado por la combinación de sexo y diagnóstico clínico (CN, AD, FTD), lo que garantiza que las proporciones de cada subgrupo se mantengan aproximadamente iguales en ambos conjuntos.
+
+\subsection{Validación cruzada $K$-Fold}
+\label{sec:kfold}
+
+Dentro del conjunto trainval, se emplea validación cruzada con $K = 5$ folds. Los índices de los folds se generan una única vez a partir de la semilla aleatoria y se almacenan para su reutilización en todas las etapas del pipeline. Esto garantiza que las distintas configuraciones de hiperparámetros sean evaluadas sobre exactamente los mismos subconjuntos de datos, haciendo las comparaciones justas y reproducibles.
+
+
+\section{Reducción de dimensionalidad: $\beta$-VAE}
+\label{sec:beta_vae}
+
+La primera etapa del pipeline consiste en comprimir los vectores de conectividad funcional de 6670 dimensiones en representaciones latentes compactas, utilizando la variante del autoencoder variacional $\beta$-VAE (véase la Sección~\ref{sec:beta_vae_theory} del Capítulo~\ref{chapter:marco_teorico}). El objetivo de esta etapa es obtener representaciones de baja dimensión que capturen los patrones relevantes de la conectividad funcional relacionados con el envejecimiento cerebral.
+
+\subsection{Configuración del $\beta$-VAE}
+
+El valor de $\beta$ se determina mediante optimización automática de hiperparámetros (Sección~\ref{sec:optuna_vae}), obteniendo un valor final de $\beta = 0{,}057$. Este valor, considerablemente menor que 1, indica que el pipeline prioriza la preservación de la información de las matrices FC en el espacio latente por sobre una distribución latente cercana al prior estándar. Esta elección tiene sentido para una tarea downstream de regresión, donde la calidad de la información contenida en los embeddings es más importante que la regularidad geométrica del espacio latente.
+
+Para evitar el colapso posterior durante el entrenamiento (véase la Sección~\ref{sec:beta_vae_theory} del Capítulo~\ref{chapter:marco_teorico}), se emplea la estrategia de calentamiento lineal de $\beta$: durante las primeras $W = 73$ épocas, $\beta$ crece linealmente desde 0 hasta su valor objetivo.
+
+\subsection{Arquitectura del modelo}
+\label{sec:vae_architecture}
+
+El encoder y el decoder del $\beta$-VAE están implementados como redes densas (\textit{fully connected}). La elección de una arquitectura densa, en lugar de convolucional, responde a la naturaleza de los datos de entrada: los vectores de conectividad funcional no poseen la estructura espacial local que las capas convolucionales explotan en imágenes, ya que el orden de las 6670 entradas del triángulo superior no codifica relaciones de vecindad espacial.
+
+\paragraph{Encoder.} Recibe el vector de FC transformado ($d = 6670$) y lo procesa a través de una capa oculta de 512 unidades, seguida de dos capas de salida paralelas que producen los parámetros $\mu \in \mathbb{R}^{64}$ y $\log \sigma^2 \in \mathbb{R}^{64}$ de la distribución latente aproximada $q(z|x) = \mathcal{N}(\mu, \sigma^2)$. A partir de estos parámetros se obtiene el vector latente $z$ mediante el truco de reparametrización.
+
+\paragraph{Decoder.} Recibe el vector latente $z \in \mathbb{R}^{64}$ y lo transforma de vuelta al espacio original mediante una capa oculta de 512 unidades, produciendo la reconstrucción $\tilde{x} \in \mathbb{R}^{6670}$.
+
+Ambas redes comparten mecanismos de regularización y normalización en cada capa oculta. Las activaciones se normalizan mediante \textit{Layer Normalization}, que estabiliza el entrenamiento sin depender del tamaño del batch. En una red neuronal, cada capa aplica una \textit{función de activación} que determina cómo se transforma la señal de salida de cada neurona; sin esta función, la red se reduciría a una transformación lineal, limitando su capacidad de modelar relaciones complejas. La función de activación utilizada es ELU (\textit{Exponential Linear Unit}), seleccionada a partir de experimentos preliminares en los que se evaluaron distintas funciones de activación (ReLU, ELU, Sigmoid, entre otras) mediante optimización con Optuna. ELU presenta la ventaja de que, a diferencia de ReLU (que devuelve 0 para cualquier entrada negativa y puede hacer que ciertas neuronas dejen de aprender permanentemente), permite valores de salida ligeramente negativos, lo que favorece la estabilidad del entrenamiento. Para prevenir el sobreajuste se utiliza dropout ($p = 0{,}037$), que desactiva aleatoriamente una fracción de las neuronas durante el entrenamiento, y regularización L2 ($\lambda = 2{,}9 \times 10^{-7}$), que penaliza la magnitud de los pesos.
+
+\paragraph{Función de pérdida de reconstrucción.} Se utiliza el error absoluto medio (MAE) en lugar del error cuadrático medio (MSE), ya que MAE es más robusto frente a valores atípicos en las matrices de conectividad funcional.
+
+La Tabla~\ref{tab:vae_hparams} resume los hiperparámetros del modelo $\beta$-VAE final.
+
+\begin{table}[H]
+\centering
+\caption{Hiperparámetros del $\beta$-VAE final, obtenidos mediante optimización con Optuna.}
+\label{tab:vae_hparams}
+\begin{tabular}{ll}
+\toprule
+\textbf{Hiperparámetro} & \textbf{Valor} \\
+\midrule
+Dimensión de entrada & 6670 \\
+Capas ocultas (encoder / decoder) & [512] \\
+Dimensión latente & 64 \\
+$\beta_{\text{target}}$ & 0,057 \\
+Épocas de warmup ($W$) & 73 \\
+Función de reconstrucción & MAE \\
+Activación & ELU \\
+Normalización & LayerNorm \\
+Dropout & 0,037 \\
+Regularización L2 & $2{,}9 \times 10^{-7}$ \\
+Learning rate & $1{,}89 \times 10^{-3}$ \\
+Gradient clipping & 1,0 \\
+Batch size & 64 \\
+Épocas de entrenamiento & 96 \\
+Semilla & 42 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Optimización de hiperparámetros con objetivo downstream}
+\label{sec:optuna_vae}
+
+Un aspecto central del diseño del pipeline es la forma en que se seleccionan los hiperparámetros del $\beta$-VAE. A diferencia de la práctica habitual de optimizar el $\beta$-VAE exclusivamente para minimizar su error de reconstrucción, en este trabajo se adopta un \textit{objetivo downstream}: los hiperparámetros se seleccionan en función de qué tan útiles resultan las representaciones latentes para la tarea de predicción de edad.
+
+La motivación detrás de esta decisión es que un $\beta$-VAE con excelente reconstrucción podría estar capturando información irrelevante para el envejecimiento (como artefactos de movimiento, diferencias de protocolo entre sitios o ruido del escáner). Al evaluar los hiperparámetros según su impacto en la predicción de edad, se fuerza al modelo a aprender representaciones que capturen información relevante al envejecimiento cerebral.
+
+Para esta optimización se utiliza Optuna \cite{akiba2019optuna}, un framework de optimización de hiperparámetros cuyas bases se describen en la Sección~\ref{sec:hpo_theory} del Capítulo~\ref{chapter:marco_teorico}.
+
+La Tabla~\ref{tab:optuna_vae_search} describe el espacio de búsqueda explorado.
+
+\begin{table}[H]
+\centering
+\caption{Espacio de búsqueda de Optuna para la optimización del $\beta$-VAE.}
+\label{tab:optuna_vae_search}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+\textbf{Hiperparámetro} & \textbf{Tipo} & \textbf{Rango / Opciones} \\
+\midrule
+Dimensión latente & Categórico & \{16, 32, 64, 128, 224\} \\
+Capas ocultas & Categórico & \{256; 512; 512-256; 1024-512; 1024-512-256\} \\
+$\beta$ & Log-uniforme & $[10^{-4},\; 0{,}2]$ \\
+Learning rate & Log-uniforme & $[10^{-4},\; 3 \times 10^{-3}]$ \\
+Dropout & Uniforme & $[0,\; 0{,}20]$ \\
+Épocas de warmup & Entero uniforme & $[10,\; 100]$ \\
+Tipo de embedding & Categórico & \{$\mu$,\; $z$\} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Procedimiento de evaluación de cada trial.} Para cada configuración de hiperparámetros propuesta por Optuna, se evalúa su calidad mediante validación cruzada con $K = 5$ folds. En cada iteración $k$ ($k = 1, \ldots, 5$), los datos se dividen en un conjunto de entrenamiento (4 folds) y uno de validación (1 fold). El procedimiento para cada fold es:
+
+\begin{enumerate}
+    \item Entrenar el $\beta$-VAE sobre los datos de FC del conjunto de entrenamiento del fold $k$ (aprendizaje no supervisado; no se utiliza la variable edad). Al finalizar, el encoder funciona como una ``máquina de comprimir'' que transforma cualquier vector FC de 6670 dimensiones en un embedding de 64.
+    \item Pasar los datos de FC de \emph{entrenamiento} por el encoder para obtener sus embeddings. Pasar también los datos de FC de \emph{validación} por el mismo encoder para obtener los embeddings de sujetos que el $\beta$-VAE no vio durante su entrenamiento.
+    \item Construir los vectores de características concatenando los embeddings con los datos T1w, obteniendo un vector por sujeto tanto para entrenamiento como para validación.
+    \item Entrenar un modelo XGBoost con hiperparámetros fijos sobre los vectores de entrenamiento del fold $k$.
+    \item Predecir la edad en los sujetos de validación (usando sus embeddings y T1w) y calcular el MAE. Dado que estos sujetos no fueron vistos ni por el $\beta$-VAE ni por XGBoost, el MAE refleja la capacidad real de generalización de esta configuración de hiperparámetros.
+\end{enumerate}
+
+El resultado del trial se define como el promedio de los 5 valores de MAE (uno por fold). De este modo, cada configuración de hiperparámetros se evalúa sobre la totalidad de los datos trainval sin que ningún sujeto participe simultáneamente en el entrenamiento y la evaluación. Optuna descarta prematuramente los trials cuyo rendimiento parcial es claramente inferior al de los trials completados, reduciendo el tiempo total de búsqueda.
+
+\paragraph{XGBoost con parámetros fijos durante la búsqueda del $\beta$-VAE.} Durante la optimización del $\beta$-VAE, el XGBoost mantiene hiperparámetros fijos y razonables (no optimizados), actuando como evaluador consistente de la calidad de los embeddings. Si ambos modelos se optimizaran simultáneamente, la búsqueda sería combinatoriamente intratable. La optimización propia de XGBoost se realiza en una etapa posterior (Sección~\ref{sec:optuna_xgb}), una vez que los embeddings del $\beta$-VAE están fijados.
+
+\paragraph{Optimización secuencial en dos etapas.} La decisión de mantener el pipeline como dos módulos separados ($\beta$-VAE + regresor), en lugar de un modelo end-to-end, responde a criterios de tratabilidad computacional e interpretabilidad. El proceso completo de selección de hiperparámetros se estructura en tres fases, ilustradas en la Figura~\ref{fig:optuna_twostage}: (1)~optimización del $\beta$-VAE con un evaluador XGBoost congelado, (2)~optimización del XGBoost con los embeddings fijados del mejor $\beta$-VAE, y (3)~entrenamiento final de ambos modelos sobre la totalidad del conjunto trainval. Esta estructura modular permite además intercambiar el regresor (por ejemplo, sustituir XGBoost por Ridge o SVR, como se evalúa en la Sección~\ref{sec:res_regresores}) sin necesidad de reentrenar el $\beta$-VAE.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    phase/.style={
+        rectangle, draw, rounded corners=4pt,
+        minimum width=3cm, minimum height=0.9cm,
+        align=center, font=\small\bfseries,
+        fill=#1!15, draw=#1!60,
+    },
+    pstep/.style={
+        rectangle, draw, rounded corners=2pt,
+        text width=4.2cm, minimum height=0.7cm,
+        align=center, font=\footnotesize,
+    },
+    frozen/.style={
+        rectangle, draw, rounded corners=2pt, dashed,
+        text width=4.2cm, minimum height=0.7cm,
+        align=center, font=\footnotesize, fill=gray!10,
+    },
+    arr/.style={-Latex, thick},
+    darr/.style={-Latex, thick, dashed, gray},
+    font=\small,
+]
+
+% Phase 1
+\node[phase=purple] (p1) at (0, 0) {Etapa 1: Optuna $\beta$-VAE};
+\node[pstep, below=0.4cm of p1] (s1a) {Sugerir hiperparámetros $\beta$-VAE\\(latent\_dim, $\beta$, lr, \ldots)};
+\node[pstep, below=0.3cm of s1a] (s1b) {Entrenar $\beta$-VAE en fold $k$\\(no supervisado)};
+\node[pstep, below=0.3cm of s1b] (s1c) {Extraer embeddings\\del fold de validación};
+\node[frozen, below=0.3cm of s1c] (s1d) {Entrenar XGBoost\\(\textit{parámetros fijos})};
+\node[pstep, below=0.3cm of s1d] (s1e) {Calcular MAE en validación\\$\rightarrow$ reportar a Optuna};
+
+\draw[arr] (p1) -- (s1a);
+\draw[arr] (s1a) -- (s1b);
+\draw[arr] (s1b) -- (s1c);
+\draw[arr] (s1c) -- (s1d);
+\draw[arr] (s1d) -- (s1e);
+
+\draw[darr, bend left=40] (s1e.west) to node[left, font=\scriptsize, text=gray] {$k=1\ldots5$} (s1b.west);
+
+\draw[darr, bend right=55] (s1e.east) to node[left, font=\scriptsize, text=gray] {$\times\,70$} (s1a.east);
+
+\node[below=0.3cm of s1e, font=\footnotesize\bfseries, purple!70!black] (out1) {$\rightarrow$ Mejor configuración $\beta$-VAE};
+
+% Phase 2
+\node[phase=orange, right=3.5cm of p1] (p2) at (7, 0) {Etapa 2: Optuna XGBoost};
+\node[frozen, below=0.4cm of p2] (s2a) {$\beta$-VAE fijo (mejor de Etapa 1)\\$\rightarrow$ embeddings fijos};
+\node[pstep, below=0.3cm of s2a] (s2b) {Sugerir hiperparámetros XGB\\(n\_est, depth, lr, \ldots)};
+\node[pstep, below=0.3cm of s2b] (s2c) {Entrenar XGBoost en fold $k$\\con embeddings fijos};
+\node[pstep, below=0.3cm of s2c] (s2d) {Calcular MAE en validación\\$\rightarrow$ reportar a Optuna};
+
+\draw[arr] (p2) -- (s2a);
+\draw[arr] (s2a) -- (s2b);
+\draw[arr] (s2b) -- (s2c);
+\draw[arr] (s2c) -- (s2d);
+
+\draw[darr, bend left=40] (s2d.west) to node[left, font=\scriptsize, text=gray] {$k=1\ldots5$} (s2c.west);
+
+\draw[darr, bend right=55] (s2d.east) to node[right, font=\scriptsize, text=gray] {$\times\,100$} (s2b.east);
+
+\node[below=0.3cm of s2d, font=\footnotesize\bfseries, orange!70!black] (out2) {$\rightarrow$ Mejor configuración XGBoost};
+
+% Phase 3
+\node[phase=teal, right=3.5cm of p2] (p3) at (14, 0) {Etapa 3: Modelo final};
+\node[pstep, below=0.4cm of p3, fill=purple!8] (s3a) {Entrenar $\beta$-VAE final\\(best params, todo trainval)};
+\node[pstep, below=0.3cm of s3a] (s3b) {Extraer embeddings finales\\(todo trainval + test)};
+\node[pstep, below=0.3cm of s3b, fill=orange!8] (s3c) {Entrenar XGBoost final\\(best params, todo trainval)};
+\node[pstep, below=0.3cm of s3c, fill=teal!10] (s3d) {Evaluar en conjunto\\de test holdout};
+
+\draw[arr] (p3) -- (s3a);
+\draw[arr] (s3a) -- (s3b);
+\draw[arr] (s3b) -- (s3c);
+\draw[arr] (s3c) -- (s3d);
+
+% Arrows between phases
+\draw[arr, purple!60, very thick] (out1.east) -- ++(1.2,0) |- (p2.west);
+\draw[arr, orange!60, very thick] (out2.east) -- ++(1.2,0) |- (p3.west);
+
+% Labels
+\node[below=0.15cm of s3d, font=\footnotesize\bfseries, teal!70!black] {$\rightarrow$ MAE, $R^2$, Pearson $r$};
+
+% Legend
+\node[frozen, text width=2.5cm, minimum height=0.5cm] at (3.5, -7.5) (leg1) {\footnotesize Componente fijo};
+\node[pstep, text width=2.5cm, minimum height=0.5cm, right=0.5cm of leg1] (leg2) {\footnotesize Componente activo};
+
+\end{tikzpicture}}
+\caption{Proceso de optimización de hiperparámetros en dos etapas. Los componentes congelados se indican con borde discontinuo. Los bucles internos ($k=1\ldots5$) representan la validación cruzada dentro de cada trial, y los bucles externos representan las iteraciones de Optuna (70 trials para el $\beta$-VAE, 100 para XGBoost).}
+\label{fig:optuna_twostage}
+\end{figure}
+
+En total, se ejecutaron 70 trials de Optuna para la optimización del $\beta$-VAE. El mejor trial obtuvo un MAE promedio de 6,43 años en validación cruzada.
+
+
+\subsection{Entrenamiento final y extracción de embeddings}
+\label{sec:vae_final}
+
+Una vez determinados los hiperparámetros óptimos, se entrena el $\beta$-VAE final sobre la totalidad del conjunto trainval ($n = 1120$ sujetos), sin reservar datos para validación interna. El objetivo es maximizar la cantidad de datos disponibles para el aprendizaje de representaciones.
+
+El número de épocas de entrenamiento se determina a partir de la validación cruzada: durante la optimización con Optuna, se registra la época en la que cada fold alcanzó su mejor pérdida de reconstrucción en validación. Se toma la mediana de estas épocas como referencia para el entrenamiento final, resultando en 96 épocas. La mediana se prefiere sobre la media por su robustez frente a folds atípicos.
+
+\paragraph{Calidad de reconstrucción.} El $\beta$-VAE final alcanzó una correlación de Pearson promedio de $0{,}79$ y una similitud coseno promedio de $0{,}87$ sobre el conjunto trainval, lo que indica que la estructura de las matrices FC se preserva en un grado sustancial tras la compresión. Estos valores se analizan en mayor detalle en el Capítulo~\ref{chapter:resultados_discusion}.
+
+\paragraph{Extracción de embeddings.} Una vez entrenado el modelo, el decoder se descarta y solo se conserva el encoder, ya que el objetivo no es reconstruir las matrices FC sino obtener representaciones compactas para la etapa de predicción. Se extraen los embeddings pasando los vectores de FC por el encoder y tomando la media $\mu$ de la distribución latente como representación de cada sujeto. Si bien la búsqueda de hiperparámetros con Optuna evaluó tanto $\mu$ como la muestra estocástica $z = \mu + \sigma \odot \epsilon$, y el trial óptimo utilizó $z$, se optó por emplear $\mu$ en el pipeline final. Esta decisión se fundamenta en que $\mu$ es determinístico: el mismo sujeto siempre produce el mismo embedding, lo cual garantiza la reproducibilidad de los resultados y la estabilidad de la etapa de predicción posterior. Los embeddings resultantes tienen dimensión 64 para cada sujeto.
+
+\section{Modelo de predicción: XGBoost}
+\label{sec:xgboost_pipeline}
+
+La segunda etapa del pipeline utiliza XGBoost como modelo de regresión para predecir la edad a partir de la combinación de representaciones latentes del $\beta$-VAE y features estructurales T1w.
+
+\subsection{Construcción del vector de características}
+
+Para cada sujeto, el vector de entrada al modelo XGBoost se construye concatenando dos bloques de features:
+\begin{itemize}
+    \item \textbf{Embeddings del $\beta$-VAE}: 64 dimensiones, obtenidas del encoder como se describió en la Sección~\ref{sec:vae_final}. Estas representaciones codifican patrones de conectividad funcional relevantes para la predicción.
+    \item \textbf{Volúmenes T1w}: 116 dimensiones, correspondientes a los volúmenes regionales de materia gris del atlas AAL.
+\end{itemize}
+
+El vector resultante tiene $64 + 116 = 180$ dimensiones por sujeto. Esta concatenación de features permite que el modelo XGBoost explote conjuntamente la información funcional y estructural.
+
+Es relevante notar que el sexo del sujeto no se incluye en la configuración final del modelo, a pesar de que fue evaluado como feature adicional. Como se muestra en la Sección~\ref{sec:ablaciones}, su inclusión no mejoró el rendimiento (MAE 5,70 vs.\ 5,62 sin sexo), posiblemente debido al tamaño reducido de la muestra.
+
+\subsection{Optimización de hiperparámetros}
+\label{sec:optuna_xgb}
+
+Los hiperparámetros de XGBoost se optimizan mediante una búsqueda independiente con Optuna, utilizando validación cruzada con los mismos 5 folds definidos previamente. Los embeddings del $\beta$-VAE final se mantienen fijos durante esta etapa, de modo que la búsqueda se centra exclusivamente en los parámetros del modelo de regresión.
+
+Se ejecutaron 100 trials, obteniendo un MAE promedio de 6,36 años en validación cruzada para la mejor configuración. La Tabla~\ref{tab:xgb_hparams} presenta los hiperparámetros finales seleccionados.
+
+\begin{table}[H]
+\centering
+\caption{Hiperparámetros del modelo XGBoost final, obtenidos mediante optimización con Optuna.}
+\label{tab:xgb_hparams}
+\begin{tabular}{ll}
+\toprule
+\textbf{Hiperparámetro} & \textbf{Valor} \\
+\midrule
+Número de árboles (\texttt{n\_estimators}) & 2103 \\
+Profundidad máxima (\texttt{max\_depth}) & 6 \\
+Tasa de aprendizaje (\texttt{learning\_rate}) & 0,011 \\
+Fracción de muestras por árbol (\texttt{subsample}) & 0,502 \\
+Fracción de features por árbol (\texttt{colsample\_bytree}) & 0,951 \\
+Regularización L1 (\texttt{reg\_alpha}) & $1{,}4 \times 10^{-3}$ \\
+Regularización L2 (\texttt{reg\_lambda}) & 7,08 \\
+Peso mínimo en hoja (\texttt{min\_child\_weight}) & 1,14 \\
+Reducción mínima de pérdida (\texttt{gamma}) & 0,675 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Entrenamiento del modelo final}
+
+Una vez seleccionados los hiperparámetros óptimos, se entrena un único modelo XGBoost sobre la totalidad del conjunto trainval ($n = 1120$). La configuración de features del modelo principal utiliza embeddings VAE + T1w (180 dimensiones), sin incluir sexo ni diagnóstico. Esta decisión se fundamenta en criterios metodológicos: el sexo se excluye porque su inclusión no mejora la predicción de forma consistente, y el diagnóstico se excluye para evitar que el modelo aprenda atajos basados en la correlación entre diagnóstico y edad. El estudio de ablaciones descrito en la Sección~\ref{sec:ablaciones} analiza de forma post-hoc la contribución de cada fuente de datos para validar estas decisiones. Este modelo se utiliza para la evaluación final reportada en el Capítulo~\ref{chapter:resultados_discusion}.
+
+\section{Estrategia de evaluación}
+\label{sec:evaluacion}
+
+\subsection{Métricas de desempeño}
+\label{sec:metricas}
+
+El rendimiento del modelo se evalúa utilizando cuatro métricas de regresión, cuyas definiciones formales se presentan en la Sección~\ref{sec:metricas_regresion} del Capítulo~\ref{chapter:marco_teorico}: el error absoluto medio (MAE), que constituye la métrica principal por su interpretabilidad directa como error promedio en años; la raíz del error cuadrático medio (RMSE), que penaliza errores grandes; el coeficiente de determinación ($R^2$), que indica la proporción de varianza explicada; y la correlación de Pearson ($r$), que mide la asociación lineal entre edades reales y predichas.
+
+\subsection{Estudio de ablaciones}
+\label{sec:ablaciones}
+
+Para cuantificar la contribución individual de cada fuente de datos, se realiza un estudio de ablaciones. Se entrenan modelos XGBoost con los mismos hiperparámetros optimizados pero utilizando diferentes combinaciones de features como entrada:
+
+\begin{enumerate}
+    \item Solo T1w (116 features)
+    \item T1w + sexo (117 features)
+    \item Solo embeddings VAE (64 features)
+    \item Embeddings VAE + sexo (65 features)
+    \item \textbf{Embeddings VAE + T1w (180 features)}
+    \item Embeddings VAE + T1w + sexo (181 features)
+    \item Embeddings VAE + T1w + sexo + diagnóstico (182 features)
+\end{enumerate}
+
+Todas las configuraciones se evalúan sobre el mismo conjunto de test ($n = 125$), lo que permite una comparación directa entre ellas. Este análisis post-hoc tiene como objetivo cuantificar la contribución individual de cada fuente de datos, evaluar si la inclusión del sexo mejora la predicción y detectar posibles sesgos introducidos por el uso del diagnóstico como feature. Los resultados del estudio de ablaciones no se utilizaron para seleccionar la configuración del modelo principal, sino para comprender y validar las decisiones de diseño.
+
+\subsection{Comparación con reducción lineal (PCA)}
+\label{sec:pca_baseline}
+
+Para evaluar si la complejidad adicional del $\beta$-VAE se justifica, se compara su rendimiento con una alternativa lineal: el Análisis de Componentes Principales (PCA, véase Sección~\ref{sec:pca}). Se entrena PCA sobre los mismos vectores de FC del conjunto trainval, proyectando los datos a 64 componentes (la misma dimensionalidad que el espacio latente del VAE). Los componentes PCA se combinan con los datos T1w y se alimentan al mismo modelo XGBoost con los mismos hiperparámetros.
+
+Esta comparación permite evaluar si las relaciones relevantes en la conectividad funcional son no lineales y si el $\beta$-VAE captura información que un método lineal no puede extraer.
+
+\subsection{Comparación con features crudos de FC}
+\label{sec:raw_fc_method}
+
+Como complemento a la comparación con PCA, se evalúa el rendimiento del modelo cuando se utilizan directamente los 6670 valores del triángulo superior de la matriz FC como features de entrada, sin ningún paso de reducción de dimensionalidad. Para esta configuración se optimizan los hiperparámetros de XGBoost de forma independiente con Optuna, dado que la entrada de alta dimensionalidad puede requerir parámetros distintos. Esta comparación permite cuantificar el beneficio de la etapa de compresión del pipeline.
+
+\subsection{Evaluación del entrenamiento exclusivo en controles sanos}
+\label{sec:cn_only}
+
+Adicionalmente, se evalúa una estrategia alternativa de entrenamiento en la que tanto el $\beta$-VAE como el XGBoost se entrenan exclusivamente sobre los sujetos cognitivamente normales (CN) presentes en el conjunto trainval ($n_{\text{CN}} = 473$ de los 526 CN totales de la cohorte). Esta estrategia está motivada por la literatura de brain age, donde es común entrenar modelos sobre poblaciones sanas para luego medir desviaciones (brain age gap) en poblaciones clínicas.
+
+Dado que el modelo se entrena únicamente con sujetos CN, la totalidad de los pacientes AD ($n = 422$) y FTD ($n = 297$) constituyen datos no vistos, independientemente de si pertenecen al conjunto trainval o test del pipeline principal. Por lo tanto, el modelo se evalúa sobre: (i)~los 53 sujetos CN del conjunto de test (ya que los restantes CN fueron utilizados para el entrenamiento), y (ii)~la totalidad de los pacientes AD y FTD de la cohorte ($n = 719$). Esta configuración maximiza el poder estadístico para detectar desviaciones clínicamente significativas en la brain age gap.
+
+\subsection{Análisis del impacto de variables demográficas}
+\label{sec:demo_method}
+
+Aprovechando la naturaleza multicéntrica y la heterogeneidad socioeconómica de la cohorte RedLaT, se analiza el impacto de variables demográficas sobre la predicción de edad cerebral. El archivo de metadatos clínicos contiene, además de la edad, sexo y diagnóstico, los años de educación formal (\texttt{cog\_ed}, disponible para el 74,9\% de la cohorte), el sitio de adquisición (75,6\%) y la marca del escáner MRI (74,0\%).
+
+El análisis sigue dos direcciones complementarias. Primero, se calcula la brain age gap del modelo principal para todos los sujetos de la cohorte ---en el caso de los sujetos del conjunto trainval, las predicciones se obtienen mediante validación cruzada con 5 folds para evitar el sobreajuste--- y se examina su asociación con las variables demográficas mediante correlaciones de Pearson y Spearman (para educación), ANOVA (para sitio y escáner) y regresión lineal multivariable. Este análisis se estratifica por grupo diagnóstico para identificar efectos diferenciales. Segundo, se evalúa si la inclusión de los años de educación y/o el sitio como features adicionales del modelo mejora la predicción de edad, extendiendo el estudio de ablaciones de la Sección~\ref{sec:ablaciones}. Para incorporar el sitio de adquisición como feature numérica, se utiliza la técnica de \textit{codificación one-hot} (también llamada \textit{variables dummy}): cada sitio se representa con una columna binaria que vale~1 si el sujeto pertenece a ese sitio y~0 en caso contrario. Así, un sujeto adquirido en el sitio Miller tendrá un~1 en la columna \texttt{site\_Miller} y un~0 en las demás columnas de sitio. Dado que estas variables no están disponibles para todos los sujetos, las configuraciones que las incorporan operan sobre una cohorte reducida, lo cual debe considerarse al interpretar los resultados.
+
+
+\section{Reproducibilidad y entorno computacional}
+\label{sec:reproducibilidad}
+
+Con el objetivo de garantizar la reproducibilidad de los resultados, se utiliza una semilla aleatoria fija (seed $= 42$) que se propaga a todas las fuentes de estocasticidad del pipeline: generación de splits, inicialización de pesos de la red neuronal, muestreo del truco de reparametrización y orden de los datos en cada época. Todos los artefactos intermedios (particiones de datos, pesos del modelo, hiperparámetros seleccionados, embeddings y métricas) se almacenan en disco en formato JSON y HDF5, lo que permite verificar cada etapa de forma independiente. El código fuente se organiza de manera modular, separando la lógica de cada componente del pipeline en módulos independientes, y se encuentra disponible en un repositorio Git.
+
+Los experimentos se ejecutaron en una estación de trabajo con procesador AMD Ryzen 5 5600X (6 núcleos / 12 hilos), 32 GB de memoria RAM y sin aceleración por GPU. El entrenamiento del $\beta$-VAE se realizó sobre CPU utilizando TensorFlow 2.20. Las principales dependencias del pipeline incluyen Python 3.11, NumPy 2.3, scikit-learn 1.8, XGBoost 3.1 y Optuna 4.7.

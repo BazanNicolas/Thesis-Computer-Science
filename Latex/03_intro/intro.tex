@@ -1,0 +1,39 @@
+\chapter{Introducción}
+\label{chapter:intro}
+
+El cerebro humano experimenta cambios constantes a lo largo de la vida como parte del proceso normal de envejecimiento. Algunos de estos cambios son progresivos, como la mielinización (crucial para el desarrollo cognitivo) o el desarrollo celular, mientras que otros reflejan procesos regresivos, entre ellos la pérdida neuronal, la reducción del volumen de materia gris y el adelgazamiento cortical \cite{good2001voxel, fjell2010structural, raz2005regional}. La combinación de estos fenómenos produce un patrón característico de envejecimiento cerebral que, en la mayoría de los casos, ocurre de manera gradual y predecible.
+
+Sin embargo, distintas enfermedades neurodegenerativas y psiquiátricas pueden alterar este curso natural. En patologías como la enfermedad de Alzheimer, por ejemplo, se observa una aceleración de la atrofia cerebral, lo que provoca que el cerebro de un paciente “aparente” una edad mayor a su edad cronológica \cite{franke2010estimating}. Este tipo de observaciones motivó el desarrollo del concepto de edad cerebral (brain age), entendido como una estimación de la edad biológica del cerebro a partir de datos de neuroimagen, generalmente obtenida mediante modelos predictivos entrenados sobre poblaciones sanas. A partir de esta estimación es posible calcular la brecha de edad cerebral (brain age gap), definida como la diferencia entre la edad predicha y la edad real del individuo \cite{smith2019estimation}. Una brecha positiva puede interpretarse como un envejecimiento acelerado, mientras que una brecha negativa sugiere resiliencia o envejecimiento más lento de lo esperado.
+
+
+La estimación de la edad cerebral suele realizarse utilizando imágenes obtenidas mediante resonancia magnética (MRI). Las imágenes T1-weighted (T1w) permiten extraer información estructural del cerebro, como volúmenes de materia gris, materia blanca y líquido cefalorraquídeo \cite{franke2010estimating}. Por otro lado, las imágenes fMRI en reposo (resting-state fMRI) capturan fluctuaciones espontáneas de la actividad cerebral, a partir de las cuales es posible calcular medidas de conectividad funcional entre distintas regiones \cite{damoiseaux2006consistent, craddock2012whole}. Dado que estructura y función aportan información complementaria sobre el envejecimiento, el uso combinado de ambas modalidades ha demostrado ser una estrategia prometedora para mejorar la precisión de los modelos de predicción \cite{erus2015imaging, groves2012benefits}.
+
+
+En este trabajo se aborda el problema de predecir la edad cerebral utilizando un enfoque multimodal. Para ello, se emplean matrices de conectividad funcional derivadas de fMRI y datos estructurales obtenidos a partir de imágenes T1w, evaluados sobre la cohorte multicéntrica latinoamericana RedLaT. Se analiza además la contribución de variables demográficas ---incluyendo sexo, años de educación y sitio de adquisición--- tanto mediante estudios de ablaciones (que investiga el rendimiento de un modelo mediante la eliminación de determinados componentes) como a través de su relación con la brain age gap. El uso de una cohorte latinoamericana, con su marcada heterogeneidad socioeconómica y cultural, permite explorar cómo factores demográficos asociados a las condiciones de vida en la región modulan la predicción de edad cerebral, un aspecto poco estudiado en la literatura existente, que se ha basado predominantemente en cohortes europeas y norteamericanas. Desde una perspectiva computacional, este trabajo propone un pipeline modular que combina técnicas de aprendizaje no supervisado ($\beta$-VAE) y modelos de regresión (XGBoost) para integrar información estructural y funcional en la estimación de la edad cerebral. Adicionalmente, se evalúa la viabilidad del pipeline como biomarcador de envejecimiento acelerado mediante el entrenamiento exclusivo en controles sanos, discutiendo las limitaciones impuestas por el tamaño de la cohorte disponible.
+
+
+\section{Objetivos}
+
+\subsection{Objetivo general}
+
+Desarrollar y evaluar un pipeline de estimación de edad cerebral basado en la integración multimodal de datos de neuroimagen funcional y estructural, utilizando técnicas de aprendizaje profundo no supervisado y modelos de regresión supervisada, y analizar el impacto de variables demográficas y la viabilidad del pipeline como biomarcador de envejecimiento cerebral sobre una cohorte multicéntrica latinoamericana.
+
+\subsection{Objetivos específicos}
+
+\begin{enumerate}
+    \item Implementar un autoencoder variacional con ponderación $\beta$ ($\beta$-VAE) para la reducción de dimensionalidad no lineal de matrices de conectividad funcional derivadas de fMRI.
+    \item Integrar las representaciones latentes funcionales con features volumétricas de materia gris (T1w) para la predicción supervisada de la edad mediante XGBoost.
+    \item Optimizar los hiperparámetros del VAE utilizando la predicción de edad como objetivo downstream, en lugar del error de reconstrucción.
+    \item Cuantificar la contribución de cada modalidad y variable mediante un estudio de ablaciones.
+    \item Comparar el enfoque de reducción no lineal (VAE) con un baseline lineal (PCA) para evaluar la naturaleza de las relaciones en los datos de conectividad funcional.
+    \item Evaluar el pipeline sobre una cohorte multicéntrica latinoamericana (RedLaT), incluyendo sujetos sanos y pacientes con enfermedades neurodegenerativas.
+    \item Analizar el impacto de variables demográficas y socioeconómicas ---en particular los años de educación y el sitio de adquisición--- sobre la brain age gap y la predicción de edad cerebral en el contexto de una cohorte latinoamericana.
+    \item Evaluar la viabilidad del pipeline como biomarcador de envejecimiento acelerado mediante el entrenamiento exclusivo en controles sanos, analizando la influencia del tamaño de la muestra sobre los resultados obtenidos.
+\end{enumerate}
+
+
+\section{Organización del trabajo}
+
+Los capítulos de este trabajo se organizan de la siguiente manera:
+
+En el Capítulo~\ref{chapter:marco_teorico} se presenta el marco teórico necesario para contextualizar el problema, abordando conceptos fundamentales de neuroimagen, aprendizaje automático, autoencoders variacionales y modelos basados en árboles. En el Capítulo~\ref{chapter:trabajo_relacionado} se revisan los trabajos previos en estimación de edad cerebral, incluyendo los métodos, datasets y resultados reportados en la literatura. En el Capítulo~\ref{chapter:datos_cohorte} se describen los datos utilizados, incluyendo las características de la cohorte RedLaT, las modalidades de neuroimagen disponibles y el proceso de integración de las fuentes de datos. El Capítulo~\ref{chapter:metodologia_pipeline} detalla la metodología propuesta y el pipeline implementado para la integración multimodal de la información y la estimación de la edad cerebral, incluyendo la arquitectura del $\beta$-VAE, el modelo de regresión XGBoost y la optimización de hiperparámetros con Optuna. En el Capítulo~\ref{chapter:resultados_discusion} se presentan los resultados obtenidos, el análisis de las métricas de desempeño, las ablaciones realizadas, la evaluación del entrenamiento exclusivo en controles sanos, el impacto de variables demográficas sobre la predicción y la brain age gap, y la discusión de los hallazgos en el contexto de la literatura existente. Finalmente, el Capítulo~\ref{chapter:conclu} resume las conclusiones del trabajo y plantea posibles líneas de investigación futura.
