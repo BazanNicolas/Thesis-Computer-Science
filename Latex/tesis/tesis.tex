@@ -208,32 +208,10 @@ Universidad o Institución.
 \phantom{p. 2}
 \clearpage
 
-% Índice de figuras
-
-\cleardoublepage
-\addcontentsline{toc}{chapter}{Índice de figuras} % para que aparezca en el indice de contenidos
-\listoffigures % indice de figuras
-
-\phantom{p. 1}
-\clearpage
-\thispagestyle{empty}
-\phantom{p. 1}
-\clearpage
-
-% Índice de tablas
-
-\cleardoublepage
-\addcontentsline{toc}{chapter}{Índice de tablas}
-\listoftables
-
-% pagina en blanco
-\newpage
-\pagenumbering{arabic}
-\phantom{p. 1}
-\clearpage
-
-
 % Contenido (capítulos)
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
 
 % Cap 1: Introducción
 \input{../03_intro/intro.tex} \cleardoublepage
@@ -263,11 +241,18 @@ Universidad o Institución.
 % \appendix
 
 
+% Índice de figuras y tablas
+
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Índice de figuras}
+\listoffigures
+
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Índice de tablas}
+\listoftables
 
 % Bibliografía
 
-\phantom{p. 1}
-\clearpage
 \cleardoublepage
 \addcontentsline{toc}{chapter}{Bibliografía}
 %\bibliographystyle{apalike}
