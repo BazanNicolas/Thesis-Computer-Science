@@ -183,7 +183,7 @@ Tipo de embedding & Categórico & \{$\mu$,\; $z$\} \\
 \end{tabular}}
 \end{table}
 
-\paragraph{Procedimiento de evaluación de cada trial.} Para cada configuración de hiperparámetros propuesta por Optuna, se evalúa su calidad mediante validación cruzada con $K = 5$ folds. En cada iteración $k$ ($k = 1, \ldots, 5$), los datos se dividen en un conjunto de entrenamiento (4 folds) y uno de validación (1 fold). El procedimiento para cada fold es:
+\paragraph{Procedimiento de evaluación de cada trial.} Para cada configuración de hiperparámetros propuesta por Optuna, se evalúa su calidad mediante validación cruzada con $K = 5$ folds, utilizando \emph{únicamente} los datos del conjunto trainval; el conjunto de test no participa en esta etapa y se reserva para la evaluación final. En cada iteración $k$ ($k = 1, \ldots, 5$), los datos de trainval se dividen en un conjunto de entrenamiento (4 folds) y uno de validación (1 fold). El procedimiento para cada fold es:
 
 \begin{enumerate}
     \item Entrenar el $\beta$-VAE sobre los datos de FC del conjunto de entrenamiento del fold $k$ (aprendizaje no supervisado; no se utiliza la variable edad). Al finalizar, el encoder funciona como una ``máquina de comprimir'' que transforma cualquier vector FC de 6670 dimensiones en un embedding de 64.
