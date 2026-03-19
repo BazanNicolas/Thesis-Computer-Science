@@ -6,7 +6,7 @@ En este capítulo se describe en detalle el pipeline desarrollado para la estima
 \section{Visión general del pipeline}
 \label{sec:pipeline_overview}
 
-El pipeline propuesto sigue una arquitectura en dos etapas: una primera etapa de reducción de dimensionalidad no supervisada, donde un autoencoder variacional comprime las matrices de conectividad funcional en representaciones latentes compactas, y una segunda etapa de predicción supervisada, donde un modelo XGBoost recibe las representaciones latentes junto con datos estructurales T1w para predecir la edad del sujeto.
+El pipeline propuesto sigue una arquitectura en dos etapas en cuanto al \textit{flujo de datos}: una primera etapa de reducción de dimensionalidad no supervisada, donde un autoencoder variacional comprime las matrices de conectividad funcional en representaciones latentes compactas, y una segunda etapa de predicción supervisada, donde un modelo XGBoost recibe las representaciones latentes junto con datos estructurales T1w para predecir la edad del sujeto. Antes de entrenar el pipeline en esta configuración, los hiperparámetros de ambos componentes se determinan en una fase previa de optimización: los del $\beta$-VAE mediante \textit{optimización de hiperparámetros con objetivo downstream} (Sección~\ref{sec:optuna_vae}), y los del XGBoost mediante una búsqueda independiente con Optuna una vez fijados los embeddings (Sección~\ref{sec:optuna_xgb}), como se detalla más adelante en este capítulo.
 
 La Figura~\ref{fig:pipeline_general} presenta un diagrama general del flujo de procesamiento.
 
