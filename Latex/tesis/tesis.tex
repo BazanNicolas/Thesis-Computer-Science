@@ -1,6 +1,7 @@
 %\documentclass[spanish,a4paper,11pt,oneside,links]{report}
-\documentclass[spanish,a4paper,oneside,10pt,openright]{book}
+\documentclass[spanish,a4paper,oneside,12pt,openright]{book}
 
+\usepackage{mathptmx}
 \usepackage{graphicx}
 \usepackage{amsmath,amsfonts,amssymb}
 \usepackage[utf8]{inputenc}
@@ -259,5 +260,30 @@ Universidad o Institución.
 %\bibliography{tesis}
 \bibliographystyle{unsrt}
 \bibliography{../tesis}
+
+% Página de aprobación del tribunal
+\cleardoublepage
+\thispagestyle{empty}
+\vspace*{2cm}
+\begin{center}
+    {\large La versión final de este Trabajo Especial, aquí presentada, fue evaluada\\[0.3em]
+    y aprobada por el tribunal examinador.}
+\end{center}
+
+\vspace{4cm}
+
+\begin{center}
+    \rule{5.5cm}{0.5pt}\\[0.3em]
+    Presidente
+\end{center}
+
+\vspace{3cm}
+
+\begin{center}
+\begin{tabular}{p{6cm} p{6cm}}
+    \centering\rule{5.5cm}{0.5pt} & \centering\rule{5.5cm}{0.5pt} \tabularnewline
+    \centering Vocal 1 & \centering Vocal 2 \tabularnewline
+\end{tabular}
+\end{center}
 
 \end{document}
