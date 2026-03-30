@@ -281,9 +281,6 @@ El resultado del trial se define como el promedio de los 5 valores de MAE (uno p
 % Labels
 \node[below=0.15cm of s3d, font=\footnotesize\bfseries, teal!70!black] {$\rightarrow$ MAE, $R^2$, Pearson $r$};
 
-% Legend
-\node[frozen, text width=2.5cm, minimum height=0.5cm] at (3.5, -7.5) (leg1) {\footnotesize Componente fijo};
-\node[pstep, text width=2.5cm, minimum height=0.5cm, right=0.5cm of leg1] (leg2) {\footnotesize Componente activo};
 
 \end{tikzpicture}}
 \caption{Proceso de optimización de hiperparámetros en dos etapas. Los componentes congelados se indican con borde discontinuo. Los bucles internos ($k=1\ldots5$) representan la validación cruzada dentro de cada trial, y los bucles externos representan las iteraciones de Optuna (70 trials para el $\beta$-VAE, 100 para XGBoost).}
