@@ -47,7 +47,7 @@ class OptunaXGBScene(Scene):
         vae_sub = Text("FIJO", font_size=9, color=C_DIM)
         vae_sub.next_to(vae_lbl, DOWN, buff=0.04)
 
-        emb_box = rounded_box("Z: 64 dims", "fijos", C_LAT, width=1.6, height=0.75)
+        emb_box = rounded_box("μ: 64 dims", "fijos", C_LAT, width=1.6, height=0.75)
         emb_box.move_to(LEFT * 3.6 + UP * 1.5)
 
         arr_emb = Arrow(vae_frozen.get_right(), emb_box.get_left(),

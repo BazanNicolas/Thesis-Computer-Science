@@ -161,7 +161,7 @@ class BetaVAEScene(Scene):
         )
         # β note al pie (solo números y parámetros)
         beta_note = Text(
-            "β = 0.0567   |   warmup = 73 épocas   |   Optuna (70 trials)   |   z: 64 dims",
+            "β = 0.0567   |   warmup = 73 épocas   |   Optuna (70 trials)   |   μ: 64 dims",
             font_size=12, color=C_DIM,
         )
         beta_note.to_edge(DOWN, buff=0.20)

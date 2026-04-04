@@ -300,13 +300,8 @@
         \item El ``cuello de botella'' fuerza a retener solo lo \highlight{más importante}
       \end{itemize}
 
-      \vspace{0.2cm}
-      {\small El modelo se entrena minimizando la diferencia entre entrada y reconstrucción:}
-      \[
-        \mathcal{L}_{\text{rec}}(\mathbf{x}, \tilde{\mathbf{x}})
-      \]
-
-      {\small Cada dato de entrada queda representado como un \textbf{punto} en el espacio latente.}
+      \vspace{0.15cm}
+      {\small Se entrena minimizando $\mathcal{L}_{\text{rec}}(\mathbf{x}, \tilde{\mathbf{x}})$. Cada dato queda como un \textbf{punto} en el espacio latente.}
     \end{column}
     \begin{column}{0.50\textwidth}
       \centering
@@ -364,9 +359,9 @@
       \end{tikzpicture}
       \shorthandon{>}
 
-      \vspace{0.12cm}
-      \includegraphics[width=0.42\textwidth]{04_marco_teorico/images/mnist.png}\\[1pt]
-      {\scriptsize Ejemplo clásico: dígitos MNIST de 28x28 píxeles}
+      \vspace{0.05cm}
+      \includegraphics[width=0.36\textwidth]{04_marco_teorico/images/mnist.png}\\[0pt]
+      {\scriptsize Ejemplo: dígitos MNIST 28$\times$28}
     \end{column}
   \end{columns}
 \end{frame}
@@ -457,82 +452,43 @@
     \end{column}
   \end{columns}
 
-  \vspace{0.2cm}
-  \begin{itemize}
-    \item $\beta = 1 \rightarrow$ VAE estándar
-    \item El valor óptimo de $\beta$, la dimensión latente y la arquitectura se determinan por \textbf{optimización automática} (ver Metodología)
-    \item \textbf{Warmup:} $\beta$ crece linealmente desde 0 durante las primeras épocas para evitar el \textit{colapso posterior} (el encoder ignora la entrada)
-    \item $\mathcal{L}_{\text{rec}}$ = MAE (error absoluto medio), más robusto que MSE ante valores atípicos
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Árboles de decisión: partición del espacio}
-  \begin{columns}[c]
-    \begin{column}{0.48\textwidth}
-      \centering
-      \includegraphics[width=0.92\textwidth]{04_marco_teorico/images/fig6_regiones_finales.png}\\[2pt]
-      {\scriptsize Regiones finales: cada rectángulo\\tiene una predicción constante.}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \centering
-      \includegraphics[width=0.92\textwidth]{04_marco_teorico/images/fig7_punto_nuevo_real_vs_pred.png}\\[2pt]
-      {\scriptsize Predicción de un nuevo punto:\\real $= 22{,}1$, predicho $= 20{,}1$.}
-    \end{column}
-  \end{columns}
-
   \vspace{0.15cm}
-  \begin{itemize}
-    \item Dividen recursivamente el espacio en regiones cada vez más homogéneas
-    \item Criterio: minimizar la varianza en cada partición
-  \end{itemize}
+  {\small
+  \begin{itemize}\setlength{\itemsep}{1pt}
+    \item $\beta = 1 \rightarrow$ VAE estándar. Valores óptimos por \textbf{optimización automática}
+    \item \textbf{Warmup:} $\beta$ crece desde 0 en las primeras épocas para evitar el \textit{colapso posterior}
+    \item $\mathcal{L}_{\text{rec}}$ = MAE, más robusto que MSE ante valores atípicos
+  \end{itemize}}
 \end{frame}
 
-\begin{frame}{Árboles de decisión: estructura y ensambles}
-  \begin{columns}[c]
-    \begin{column}{0.50\textwidth}
-      \begin{itemize}
-        \item Cada nodo interno: condición sobre una variable
-        \item Cada hoja: valor de predicción constante (promedio)
-      \end{itemize}
-
-      \vspace{0.15cm}
-      \begin{alertblock}{\small Limitación: sobreajuste}
-        {\small Un solo árbol se adapta demasiado a los datos $\rightarrow$ se combina con \textbf{ensambles}.}
-      \end{alertblock}
-
-      \vspace{0.15cm}
-      {\small \textbf{Ensambles de árboles:}}
-      \begin{itemize}
-        \item \textbf{Bagging} (ej: Random Forest): árboles en \highlight{paralelo}, promedio de predicciones
-        \item \textbf{Boosting}: árboles \highlight{secuenciales}, cada uno corrige errores del anterior
-      \end{itemize}
-
-      \vspace{0.1cm}
-      {\scriptsize \textbf{Idea clave:} muchos \textit{weak learners} (modelos simples) combinados producen un predictor fuerte (Schapire, 1990).}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \centering
-      \includegraphics[width=\textwidth]{04_marco_teorico/images/fig2_arbol_completo.png}\\[3pt]
-      {\scriptsize Árbol de regresión completo}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Gradient Boosting: ensamble secuencial}
+\begin{frame}{De árboles de decisión a XGBoost}
   \begin{columns}[c]
     \begin{column}{0.52\textwidth}
-      \begin{itemize}
-        \item Técnica de \textbf{boosting}: árboles agregados secuencialmente
-        \item Cada nuevo árbol corrige los \highlight{errores residuales} del modelo acumulado
-        \item Avanza en la dirección que \textbf{reduce el gradiente} de la pérdida
-        \item Predicción final: \textbf{suma ponderada} de todos los árboles
-        \item Un \textit{learning rate} controla cuánto aporta cada corrección
-      \end{itemize}
+      {\small \textbf{Árbol de decisión:} divide el espacio de features en regiones
+      mediante reglas si/no. Un solo árbol \highlight{sobreajusta}.}
+
+      \vspace{0.15cm}
+      {\small \textbf{Gradient Boosting:} muchos árboles \highlight{secuenciales};
+      cada uno corrige los \textbf{residuos} del anterior.
+      $\hat{y} = \sum_t f_t(x)$}
+
+      \vspace{0.15cm}
+      {\small \textbf{XGBoost} --- implementación optimizada:}
+      \vspace{-0.1cm}
+      {\small
+      \begin{itemize}\setlength{\itemsep}{1pt}
+        \item \highlight{Regularización} contra sobreajuste
+        \item Referencia en \textbf{datos tabulares}
+        \item \highlight{Importancia de features} directa (Gain)
+      \end{itemize}}
+
+      \vspace{0.05cm}
+      {\footnotesize \textbf{En este trabajo:} recibe embeddings FC + T1w y predice la edad. HP optimizados con Optuna.}
     \end{column}
     \begin{column}{0.45\textwidth}
       \centering
       \shorthandoff{>}
-      \begin{tikzpicture}[scale=0.72, transform shape,
+      \begin{tikzpicture}[scale=0.65, transform shape,
         tree/.style={draw, rounded corners, minimum width=1.6cm, minimum height=0.55cm, fill=unclight, font=\small},
         arr/.style={->, thick, uncblue}
       ]
@@ -557,38 +513,6 @@
         \draw[->, thick, uncblue] (tn.east) -- ++(0.4,0) |- (sum);
       \end{tikzpicture}
       \shorthandon{>}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{XGBoost}
-  \begin{columns}[c]
-    \begin{column}{0.55\textwidth}
-      \begin{itemize}
-        \item Implementación optimizada de \textbf{Gradient Boosting} con árboles
-        \item \highlight{Regularización explícita:} penaliza la complejidad de los árboles para evitar sobreajuste
-        \item Búsqueda de divisiones por \textbf{cuantiles}
-        \item Manejo nativo de \textbf{datos faltantes}
-        \item Considerado uno de los \textbf{mejores modelos} para datos tabulares
-      \end{itemize}
-
-      \vspace{0.2cm}
-      \begin{block}{En este trabajo}
-        Recibe el vector de features (embeddings FC + volúmenes T1w) y predice la edad. Hiperparámetros optimizados con Optuna.
-      \end{block}
-    \end{column}
-    \begin{column}{0.42\textwidth}
-      \vspace{0.2cm}
-      {\small \textbf{¿Por qué XGBoost?}}
-
-      \vspace{0.3cm}
-      \begin{itemize}
-        \item[\checkmark] Regularización incluida
-        \item[\checkmark] Eficiente en alta dimensionalidad
-        \item[\checkmark] Proporciona \highlight{importancia de features} de forma directa (Gain)
-        \item[\checkmark] Permite interpretar qué regiones cerebrales contribuyen a la predicción
-      \end{itemize}
-
     \end{column}
   \end{columns}
 \end{frame}
@@ -706,28 +630,6 @@
     Framework de optimización bayesiana usado para ambos modelos ($\beta$-VAE y XGBoost).\\
     Se evalúa cada configuración con \textbf{validación cruzada 5-Fold}.
   \end{block}
-\end{frame}
-
-
-\section{Objetivos}
-
-\begin{frame}{Objetivos del trabajo}
-  \begin{block}{Objetivo general}
-    Desarrollar y evaluar un pipeline de estimación de edad cerebral basado en la integración multimodal de datos funcionales y estructurales, analizar el impacto de variables demográficas y explorar la viabilidad como biomarcador.
-  \end{block}
-
-  \vspace{0.2cm}
-  \textbf{Objetivos específicos:}
-  \begin{enumerate}
-    \item Implementar un $\beta$-VAE para reducción no lineal de las matrices de FC
-    \item Integrar representaciones latentes (FC) con features T1w para predicción con XGBoost
-    \item Optimizar el $\beta$-VAE con un \highlight{objetivo downstream} (predicción de edad)
-    \item Cuantificar la contribución de cada modalidad (estudio de ablaciones)
-    \item Comparar reducción no lineal ($\beta$-VAE) vs.\ lineal (PCA)
-    \item Evaluar sobre la cohorte \highlight{latinoamericana} multicéntrica RedLaT
-    \item Analizar el impacto de variables \highlight{demográficas} (educación, sitio) sobre la brain age gap
-    \item Evaluar la viabilidad como \highlight{biomarcador} mediante entrenamiento exclusivo en controles sanos
-  \end{enumerate}
 \end{frame}
 
 
@@ -925,30 +827,67 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Optimización con objetivo \textit{downstream}}
+\begin{frame}{Optimización en dos etapas}
   \begin{columns}[T]
     \begin{column}{0.46\textwidth}
-      \begin{alertblock}{Enfoque tradicional}
-        {\small Optimizar $\beta$-VAE para reconstruir bien\\
-        $\rightarrow$ Podría capturar ruido\\irrelevante para la edad}
+      \begin{alertblock}{\scriptsize Enfoque tradicional}
+        {\scriptsize Optimizar $\beta$-VAE para reconstruir bien
+        $\rightarrow$ Podría capturar ruido irrelevante}
       \end{alertblock}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \begin{block}{Nuestro enfoque}
-        {\small Optimizar $\beta$-VAE según qué tan bien\\predice la edad con sus embeddings\\
-        $\rightarrow$ Representaciones orientadas\\al envejecimiento}
+      \begin{block}{\scriptsize Nuestro enfoque (\textit{downstream})}
+        {\scriptsize Optimizar $\beta$-VAE según predicción de edad
+        $\rightarrow$ Representaciones orientadas al envejecimiento}
       \end{block}
     \end{column}
   \end{columns}
 
-  \vspace{0.3cm}
-  \textbf{Procedimiento (Optuna, 70 trials):}
-  \begin{enumerate}
-    \item Entrenar $\beta$-VAE con hiperparámetros propuestos
-    \item Extraer embeddings $\rightarrow$ combinar con T1w
-    \item Entrenar XGBoost (parámetros fijos) y evaluar MAE en 5-Fold CV
-    \item Optuna busca la configuración que \highlight{minimice el MAE}
-  \end{enumerate}
+  \vspace{0.1cm}
+  \centering
+  \shorthandoff{>}
+  \begin{tikzpicture}[scale=0.60, transform shape,
+    stage/.style={draw, thick, rounded corners=5pt, minimum width=3.8cm,
+                  minimum height=1.2cm, align=center, font=\small},
+    optstep/.style={draw, rounded corners=2pt, minimum width=2.8cm,
+                 minimum height=0.5cm, align=center, font=\scriptsize, fill=unclight},
+    frozen/.style={optstep, dashed, fill=gray!15},
+    arr/.style={-{Stealth[length=2.5mm]}, thick, uncblue},
+    lbl/.style={font=\tiny, gray}
+  ]
+    \node[stage, fill=uncblue!15] (e1) at (0, 0) {\textbf{Etapa 1}\\Optuna $\beta$-VAE};
+    \node[stage, fill=uncblue!15] (e2) at (5.5, 0) {\textbf{Etapa 2}\\Optuna XGBoost};
+    \node[stage, fill=uncaccent!15] (e3) at (11, 0) {\textbf{Etapa 3}\\Modelo final};
+
+    \node[optstep] (vae1) at (0, -2) {Entrenar $\beta$-VAE\\con HP propuestos};
+    \node[frozen] (xgb1) at (0, -3.5) {XGBoost\\(params fijos)};
+    \node[lbl] at (0, -4.3) {$\times$ 70 trials, 5-fold CV};
+
+    \node[frozen] (vae2) at (5.5, -2) {$\beta$-VAE fijo\\(mejor de Etapa 1)};
+    \node[optstep] (xgb2) at (5.5, -3.5) {Entrenar XGBoost\\con HP propuestos};
+    \node[lbl] at (5.5, -4.3) {$\times$ 100 trials, 5-fold CV};
+
+    \node[optstep] (vae3) at (11, -2) {$\beta$-VAE final\\(todo trainval)};
+    \node[optstep] (xgb3) at (11, -3.5) {XGBoost final\\(todo trainval)};
+    \node[lbl] at (11, -4.3) {Evaluar en test holdout};
+
+    \draw[arr] (e1) -- (e2);
+    \draw[arr] (e2) -- (e3);
+    \draw[arr] (e1) -- (vae1);
+    \draw[arr] (vae1) -- (xgb1);
+    \draw[arr] (e2) -- (vae2);
+    \draw[arr] (vae2) -- (xgb2);
+    \draw[arr] (e3) -- (vae3);
+    \draw[arr] (vae3) -- (xgb3);
+  \end{tikzpicture}
+  \shorthandon{>}
+
+  \vspace{0.15cm}
+  {\small
+  \begin{itemize}\setlength{\itemsep}{1pt}
+    \item Componentes \textbf{congelados} (borde discontinuo) no se optimizan en esa etapa
+    \item Estructura \textbf{modular}: permite intercambiar el regresor sin reentrenar el $\beta$-VAE
+  \end{itemize}}
 \end{frame}
 
 \begin{frame}{Configuración óptima del $\beta$-VAE (Optuna)}
@@ -1389,7 +1328,7 @@
     \toprule
     \textbf{Modelo} & \textbf{Grupo} & $\boldsymbol{n}$ & \textbf{MAE} & \textbf{Gap} \\
     \midrule
-    CN baseline & CN (test) & 53 & 6,09 & $-0{,}07$ \\
+    CN baseline (337) & CN (test) & 53 & 6,09 & $-0{,}07$ \\
                 & AD       & 422 & 6,97 & $+0{,}21$ \\
                 & FTD      & 297 & 7,42 & $+4{,}01$ \\
     \midrule
@@ -1423,6 +1362,9 @@
 
     \vspace{0.3cm}
     \item $R^2 = 0{,}41$: queda varianza por explicar $\rightarrow$ margen de mejora
+
+    \vspace{0.3cm}
+    \item \highlight{CN-only + demográficos: MAE 5,51} --- mejor que el modelo mixto (5,62) y más comparable con la literatura (entrenan solo con sanos)
   \end{itemize}
 \end{frame}
 
@@ -1446,7 +1388,7 @@
 
 \begin{frame}{Conclusiones}
   \begin{enumerate}
-    \item Pipeline multimodal (FC + T1w) con MAE de \highlight{5,62 años}; al incluir educación y sitio como features con Optuna: \highlight{MAE 5,17}
+    \item Pipeline multimodal (FC + T1w) con MAE de \highlight{5,62 años}; con educación y sitio: \highlight{MAE 5,17}. CN-only + demográficos: \highlight{MAE 5,51}
 
     \vspace{0.18cm}
     \item La integración de ambas modalidades mejora la predicción\\$\rightarrow$ las fuentes son \highlight{complementarias}
@@ -1458,7 +1400,7 @@
     \item El \highlight{sitio de adquisición} es el mayor confundidor demográfico ($\sim$8 años de rango); armonización necesaria
 
     \vspace{0.18cm}
-    \item El modelo CN-only + demográficos produce gaps consistentemente positivas en AD y FTD $\rightarrow$ \highlight{prometedor} como biomarcador con cohortes más amplias
+    \item CN-only + demográficos: \highlight{MAE 5,51} (mejor que mixto) con gaps positivas en AD y FTD $\rightarrow$ \highlight{prometedor} como biomarcador
 
     \vspace{0.18cm}
     \item Evaluado sobre cohorte \highlight{latinoamericana multicéntrica}; resultados relevantes en contexto LAC

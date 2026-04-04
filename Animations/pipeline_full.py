@@ -3,7 +3,7 @@ Pipeline completo — Brain Age Estimation Pipeline.
 
 Escena única que construye el pipeline de izquierda a derecha en 5 fases:
   1. FC matrix → 6,670 features
-  2. β-VAE → z: 64 dims
+  2. β-VAE → μ: 64 dims
   3. + T1w: 116 features
   4. → 180 → XGBoost → ŷ
   5. Resultado final con métricas
@@ -74,7 +74,7 @@ class FullPipeline(Scene):
         self.play(FadeIn(box_fc, shift=RIGHT * 0.15), run_time=0.9)
         self.wait(0.6)
 
-        # --- FASE 2 — β-VAE encoder → z: 64 ---
+        # --- FASE 2 — β-VAE encoder → μ: 64 ---
 
         arr_vae_in = compact_arrow([-2.97, 0.5, 0], [-2.20, 0.5, 0], C_VAE)
 
@@ -115,8 +115,8 @@ class FullPipeline(Scene):
         vae_lbl = Text("β-VAE", font_size=13, color=C_VAE, weight=BOLD)
         vae_lbl.next_to(vae_brace, LEFT, buff=0.10)
 
-        # Caja z: 64 (a la derecha del embudo)
-        box_z = rounded_box("z : 64", "latent dims", C_LAT, width=1.35, height=0.82)
+        # Caja μ: 64 (a la derecha del embudo)
+        box_z = rounded_box("μ : 64", "latent dims", C_LAT, width=1.35, height=0.82)
         box_z.move_to([0.35, 0.5, 0])
 
         arr_z_out = compact_arrow([-0.03, -0.15, 0], [0.35 - 0.68, 0.5 - 0.41 + 0.02, 0], C_LAT)
