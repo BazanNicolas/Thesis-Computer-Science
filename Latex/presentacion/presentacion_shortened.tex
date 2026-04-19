@@ -317,8 +317,8 @@
 
       \vspace{0.05cm}
       {\small \textbf{$\beta$-VAE:} $\mathcal{L} = \mathcal{L}_{\text{rec}} + \beta \cdot D_{KL}$.\;
-      $\beta$ pondera reconstrucción vs.\ regularización.
-      Optuna: $\beta = 0{,}057 \ll 1$ $\rightarrow$ \highlight{prioriza preservar información}.}
+      $\beta$ pondera reconstrucción vs.\ regularización; $\beta \to 0$ \highlight{recupera el AE clásico}.\\
+      Optuna: $\beta = 0{,}057 \ll 1$ $\rightarrow$ comportamiento cercano a AE para esta tarea.}
 
       \vspace{0.15cm}
       {\small \textbf{En este trabajo:} $6670 \to 64$ dimensiones (99\% de compresión). Para la predicción se usa $\mu$ directamente (determinístico). El espacio latente regularizado produce representaciones más robustas para la tarea de predicción de edad.}
