@@ -466,9 +466,10 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Optimización en dos etapas}
+\begin{frame}[shrink=2]{Optimización en dos etapas}
   \begin{block}{\small Enfoque \textit{downstream}: optimización orientada a la tarea}
-    {\small El $\beta$-VAE se optimiza según la \highlight{predicción de edad}, no según reconstrucción $\rightarrow$ representaciones orientadas al envejecimiento.}
+    {\footnotesize \textbf{Entrenamiento del $\beta$-VAE:} no supervisado sobre FC con pérdida ELBO ($\mathcal{L}_{\text{rec}} + \beta \cdot D_{KL}$).\\
+    \textbf{Selección con Optuna:} los hiperparámetros (incl.\ $\beta$) se eligen por el \highlight{MAE de edad} en validación cruzada con XGBoost, no por reconstrucción ni por ELBO aislados. No se fija a priori el balance reconstrucción vs.\ regularización del latente: la búsqueda descubre qué configuración sirve mejor para la tarea downstream.}
   \end{block}
 
   \vspace{0.05cm}
@@ -579,14 +580,17 @@
   {\small Patrones globales de conectividad preservados; detalles finos suavizados por la compresión.}
 \end{frame}
 
-\begin{frame}[shrink=3]{Resultado del modelo principal}{\color{uncyellow}\scriptsize $\blacktriangleright$ Objetivo 1: Predicción de edad cerebral}
+\begin{frame}[shrink=8]{Resultado del modelo principal}{\color{uncyellow}\scriptsize $\blacktriangleright$ Objetivo 1: Predicción de edad cerebral}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       \centering
-      \includegraphics[width=0.88\textwidth]{06_resultados_discusion/images/xgb_scatter.png}\\[2pt]
-      {\scriptsize Edad predicha vs.\ edad real ($n = 125$)}
+      \begin{minipage}[t]{\linewidth}
+        \centering
+        \includegraphics[width=0.86\linewidth]{06_resultados_discusion/images/xgb_scatter.png}\\[1pt]
+        {\scriptsize Edad predicha vs.\ edad real ($n = 125$)}
+      \end{minipage}
     \end{column}
-    \begin{column}{0.48\textwidth}
+    \begin{column}{0.50\textwidth}
       \begin{block}{Métricas en test}
         \centering
         {\small
@@ -600,11 +604,27 @@
         \end{tabular}}
       \end{block}
 
-      \vspace{0.05cm}
-      {\small Error promedio de $\sim$5,6 años.\\Comparable con Gao et al.\ (5,92) con cohorte más diversa.}
-
-      \vspace{0.05cm}
+      \vspace{0.06cm}
       {\scriptsize Mayor dispersión en extremos del rango etario.}
+
+      \vspace{0.12cm}
+      \centering
+      {\scriptsize \textbf{Contexto literatura} (MAE años; orientativo según $N$ y pipeline)}\\[2pt]
+      \resizebox{\linewidth}{!}{%
+      \begin{tabular}{@{}l l r r@{}}
+        \toprule
+        \textbf{Estudio} & \textbf{Modalidad / modelo} & $\boldsymbol{N}$ & \textbf{MAE} \\
+        \midrule
+        Franke et al.\ (2010) & T1w / RVM + PCA & 650 & 5,00 \\
+        Liem et al.\ (2017) & T1w + FC / stacking & 2\,354 & 4,29 \\
+        Gao et al.\ (2023) & FC / GNN (AAL) & 471 & 5,92 \\
+        Bashyam et al.\ (2020) & T1w / 2D-CNN & 14\,468 & $\sim$3,7 \\
+        Dufumier et al.\ (2024) & T1w + FC / M-AVAE & 5\,330 & 2,77 \\
+        \midrule
+        \rowcolor{unclight}
+        \textbf{Este trabajo} & \textbf{FC + T1w / $\beta$-VAE + XGB} & \textbf{1\,245} & \textbf{5,62} \\
+        \bottomrule
+      \end{tabular}}
     \end{column}
   \end{columns}
 \end{frame}
@@ -631,7 +651,7 @@
   {\footnotesize
   \begin{tabular}{lrrrr}
     \toprule
-    \textbf{Features} & \textbf{MAE} & \textbf{RMSE} & $\boldsymbol{R^2}$ & $\boldsymbol{r}$ \\
+    \textbf{Features} & \textbf{MAE} & \textbf{RMSE} & $\boldsymbol{R^2}$ & \textbf{Pearson} $r$ \\
     \midrule
     Solo T1w (116) & 5,89 & 7,48 & 0,366 & 0,606 \\
     T1w + sexo (117) & 5,88 & 7,44 & 0,372 & 0,612 \\
@@ -664,32 +684,15 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{¿Importa cómo se comprime la conectividad?}{\color{uncyellow}\scriptsize $\blacktriangleright$ Objetivo 1: Predicción de edad cerebral}
+\begin{frame}[shrink=2]{¿Importa cómo se comprime la conectividad?}{\color{uncyellow}\scriptsize $\blacktriangleright$ Objetivo 1: Predicción de edad cerebral}
+  \begingroup
+  \renewcommand{\arraystretch}{0.92}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      {\small \textbf{PCA vs.\ $\beta$-VAE} (misma dim.\ 64 + T1w):}
+      {\footnotesize \textbf{FC crudo vs.\ comprimido}}
 
-      \vspace{0.1cm}
-      {\small
-      \begin{tabular}{lrr}
-        \toprule
-        & \textbf{MAE} & $\boldsymbol{R^2}$ \\
-        \midrule
-        PCA + T1w & 5,61 & 0,431 \\
-        $\beta$-VAE + T1w & 5,62 & 0,411 \\
-        \bottomrule
-      \end{tabular}}
-
-      \vspace{0.15cm}
-      {\small Rendimiento \highlight{prácticamente idéntico}.\\
-      XGBoost captura no linealidades aun desde PCA.\\[4pt]
-      {\scriptsize Optuna exploró solo 70 de un espacio vasto para el $\beta$-VAE.}}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      {\small \textbf{FC crudo vs.\ comprimido:}}
-
-      \vspace{0.1cm}
-      {\small
+      \vspace{0.14cm}
+      {\footnotesize
       \begin{tabular}{lrrr}
         \toprule
         & \textbf{Feats} & \textbf{MAE} & $\boldsymbol{R^2}$ \\
@@ -700,12 +703,52 @@
         \bottomrule
       \end{tabular}}
 
-      \vspace{0.15cm}
-      {\small \highlight{97,3\%} menos features y mejor MAE.\\
-      La \highlight{reducción} es lo clave,\\no si es lineal o no lineal.}
+      \vspace{0.18cm}
+      {\footnotesize \highlight{97,3\%} menos features y mejor MAE.\\
+      La \highlight{reducción} es lo clave, no si es lineal o no lineal.}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      {\footnotesize \textbf{PCA vs.\ $\beta$-VAE} (misma dim.\ 64 + T1w):}
+
+      \vspace{0.14cm}
+      {\footnotesize
+      \begin{tabular}{lrr}
+        \toprule
+        & \textbf{MAE} & $\boldsymbol{R^2}$ \\
+        \midrule
+        PCA + T1w & 5,61 & 0,431 \\
+        $\beta$-VAE + T1w & 5,62 & 0,411 \\
+        \bottomrule
+      \end{tabular}}
+
+      \vspace{0.18cm}
+      {\footnotesize Rendimiento \highlight{prácticamente idéntico}.\\
+      XGBoost captura no linealidades aun desde PCA.\\[3pt]
+      }
     \end{column}
   \end{columns}
+  \endgroup
 
+  \vspace{0.28cm}
+  \centering
+  {\scriptsize \textbf{Comparación de regresores} (mismas 180 features; Optuna 100 trials; métricas en test)}\\[0.14cm]
+  {\scriptsize
+  \begingroup
+  \renewcommand{\arraystretch}{0.92}
+  \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Regresor} & \textbf{MAE} & \textbf{RMSE} & $\boldsymbol{R^2}$ & \textbf{Pearson} $r$ \\
+    \midrule
+    Ridge & 5,75 & 7,25 & 0,403 & 0,639 \\
+    SVR (RBF) & 5,65 & 7,02 & 0,441 & 0,664 \\
+    \rowcolor{unclight}
+    \textbf{XGBoost} & \textbf{5,62} & \textbf{7,20} & \textbf{0,411} & \textbf{0,644} \\
+    \bottomrule
+  \end{tabular}
+  \endgroup}\\[0.12cm]
+  {\scriptsize Tres familias distintas $\rightarrow$ resultados \highlight{prácticamente iguales}. Pesa más la \textbf{representación} que el regresor.}
+
+  \vspace{0.12cm}
   \objectivetracker{\objdone}{\objpend}{\objpend}
 \end{frame}
 
@@ -719,7 +762,7 @@
   {\small
   \begin{tabular}{lrrl}
     \toprule
-    \textbf{Grupo} & $\boldsymbol{r}$ & $\boldsymbol{p}$ & \textbf{Interpretación} \\
+    \textbf{Grupo} & \textbf{Pearson} $r$ & $\boldsymbol{p}$ & \textbf{Interpretación} \\
     \midrule
     CN  & $-0{,}067$ & $0{,}19$ & tendencia negativa, no significativa \\
     AD  & $+0{,}165$ & $0{,}002$ & significativa ($\uparrow$ educación $\rightarrow$ gap más alta) \\
@@ -795,7 +838,7 @@
   {\small
   \begin{tabular}{lrrrr}
     \toprule
-    \textbf{Configuración} & $\boldsymbol{n_{\text{test}}}$ & \textbf{MAE} & $\boldsymbol{R^2}$ & $\boldsymbol{r}$ \\
+    \textbf{Configuración} & $\boldsymbol{n_{\text{test}}}$ & \textbf{MAE} & $\boldsymbol{R^2}$ & \textbf{Pearson} $r$ \\
     \midrule
     $\beta$-VAE + T1w (baseline) & 125 & 5,62 & 0,411 & 0,644 \\
     + educación & 91 & 5,33 & 0,502 & 0,711 \\
@@ -864,7 +907,7 @@
                 & FTD      & 297 & 7,42 & $+4{,}01$ \\
     \midrule
     CN + edu + sitio & CN (test) & 37 & \highlight{5,51} & $+0{,}41$ \\
-                     & AD       & 348 & 6,41 & $+0{,}70$ \\
+                     & AD       & 348 & 6,41 & \highlight{$+0{,}70$} \\
                      & FTD      & 211 & 6,49 & \highlight{$+4{,}11$} \\
     \bottomrule
   \end{tabular}}
