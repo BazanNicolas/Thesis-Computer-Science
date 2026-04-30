@@ -173,7 +173,7 @@
       \begin{itemize}\setlength{\itemsep}{1pt}
         \item \highlight{MRI}: técnica no invasiva; imágenes \textbf{T1w} distinguen materia gris, blanca y LCR
         \item \highlight{Materia gris}: cuerpos neuronales; volumen \textbf{disminuye con la edad}
-        \item Atlas \highlight{AAL}: \textbf{116 regiones} anatómicas (espacio estándar MNI152)
+        \item \highlight{MNI152}: plantilla promedio/de referencia + atlas \highlight{AAL116}
       \end{itemize}
 
       \vspace{0.05cm}
@@ -189,10 +189,12 @@
     \end{column}
     \begin{column}{0.45\textwidth}
       \centering
-      \includegraphics[width=0.52\textwidth]{04_marco_teorico/images/t1_structural.png}\\[1pt]
-      {\scriptsize Imagen T1w}\\[3pt]
-      \includegraphics[width=0.52\textwidth]{04_marco_teorico/images/mni152+atlas.png}\\[1pt]
-      {\scriptsize Atlas AAL: 116 regiones}
+      \includegraphics[width=0.48\textwidth]{04_marco_teorico/images/t1_structural.png}\\[1pt]
+      {\scriptsize T1w de un sujeto}\\[2pt]
+      \includegraphics[width=0.48\textwidth]{04_marco_teorico/images/mni152+atlas.png}\\[1pt]
+      {\scriptsize MNI152 (referencia) + AAL116}\\[2pt]
+      \includegraphics[width=0.62\textwidth]{04_marco_teorico/images/bold_timeseries.png}\\[-2pt]
+      {\scriptsize Serie temporal BOLD}
     \end{column}
   \end{columns}
 \end{frame}
@@ -205,8 +207,9 @@
   \begin{columns}[c]
     \begin{column}{0.48\textwidth}
       \begin{itemize}
-        \item Se calcula la \highlight{correlación de Pearson} entre cada par de regiones
-        \item Resultado: matriz simétrica $116 \times 116$
+        \item \highlight{Correlación de Pearson} entre pares de regiones
+        \item Matriz simétrica: $\mathrm{corr}(i,j)=\mathrm{corr}(j,i)$
+        \item Diagonal $=1$; se descarta
         \item Triángulo superior: \highlight{6670 valores} por sujeto
       \end{itemize}
     \end{column}
@@ -301,27 +304,25 @@
 \begin{frame}[shrink=10]{$\beta$-VAE: compresión inteligente de la conectividad}
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
-      {\small \textbf{Autoencoder:} red que comprime y reconstruye. El ``cuello de botella'' retiene solo lo esencial.}
+      {\small \textbf{Objetivo:} comprimir FC de $6670 \to 64$ dimensiones sin perder la señal útil para edad.}
 
-      \vspace{0.08cm}
-      {\small \textbf{VAE --- la diferencia clave:}
-      cada entrada no es un \textbf{punto} sino una \highlight{distribución} ($\mu$, $\sigma$).
-      Truco de reparametrización:}
-      \vspace{-0.15cm}
-      \[
-        z = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
-      \]
+      \vspace{0.12cm}
+      {\small \textbf{AE clásico:} cada entrada $\to$ un \textbf{punto fijo} en el latente.}
 
-      \vspace{-0.25cm}
-      {\small Cada vez que se ``corre'', el resultado puede ser distinto (naturaleza probabilística).}
+      \vspace{0.12cm}
+      {\small \textbf{VAE:} cada entrada $\to$ una \highlight{distribución} $(\mu, \sigma)$. Introduce una parte probabilística controlada; el truco de reparametrización permite entrenarla.}
 
-      \vspace{0.05cm}
-      {\small \textbf{$\beta$-VAE:} $\mathcal{L} = \mathcal{L}_{\text{rec}} + \beta \cdot D_{KL}$.\;
-      $\beta$ pondera reconstrucción vs.\ regularización; $\beta \to 0$ \highlight{recupera el AE clásico}.\\
-      Optuna: $\beta = 0{,}057 \ll 1$ $\rightarrow$ comportamiento cercano a AE para esta tarea.}
+      \vspace{0.1cm}
+      {\small \textbf{$\beta$-VAE:} $\beta$ pondera reconstrucción vs.\ regularización del latente.\\
+      $\beta \to 0$ \highlight{recupera el AE clásico}.}
 
       \vspace{0.15cm}
-      {\small \textbf{En este trabajo:} $6670 \to 64$ dimensiones (99\% de compresión). Para la predicción se usa $\mu$ directamente (determinístico). El espacio latente regularizado produce representaciones más robustas para la tarea de predicción de edad.}
+      {\small \textbf{En este trabajo:}
+      \begin{itemize}\setlength{\itemsep}{1pt}
+        \item Para predecir edad se usa $\mu$ (determinístico).
+        \item Búsqueda automática: $\beta = 0{,}057 \ll 1$.
+        \item Lectura: preservar información fue más útil que regularizar fuerte.
+      \end{itemize}}
     \end{column}
     \begin{column}{0.48\textwidth}
       {\scriptsize \textbf{AE clásico} --- cada entrada $\to$ \textbf{punto fijo} $z$:}
@@ -386,7 +387,7 @@
         \node[decblock, right=0.8cm of z] (dec) {Decoder\\[-2pt]{\tiny $p(x \mid z)$}};
         \node[right=0.5cm of dec] (xhat) {$\tilde{x}$};
 
-        \node[below=0.5cm of z, font=\tiny] (eps) {$\epsilon \sim \mathcal{N}(0, I)$};
+        \node[below=0.5cm of z, font=\tiny] (eps) {muestreo};
 
         \draw[arr] (x) -- (enc);
         \draw[arr] (enc) |- (mu);
@@ -397,7 +398,7 @@
         \draw[arr] (z) -- (dec);
         \draw[arr] (dec) -- (xhat);
 
-        \node[above=0.05cm of z, font=\tiny\itshape] {$z = \mu + \sigma \odot \epsilon$};
+        \node[above=0.05cm of z, font=\tiny\itshape] {parte probabilística};
       \end{tikzpicture}
       \shorthandon{>}
 
@@ -451,7 +452,7 @@
     \node[box, fill=unclight] (all) {Cohorte\\$N = 1245$};
     \node[box, fill=unclight, below left=1cm and 0.2cm of all] (tv) {Trainval (90\%)\\$n = 1120$};
     \node[box, fill=uncaccent!15, below right=1cm and 0.2cm of all] (test) {Test (10\%)\\$n = 125$};
-    \node[box, fill=unclight!50, below=1cm of tv, text width=3.2cm] (cv) {5-Fold CV\\hiperparámetros};
+    \node[box, fill=unclight!50, below=1cm of tv, text width=3.4cm] (cv) {5-Fold CV\\4 entrenan + 1 valida\\(rotando)};
     \draw[arr] (all) -- (tv);
     \draw[arr] (all) -- (test);
     \draw[arr] (tv) -- (cv);
@@ -467,9 +468,8 @@
 \end{frame}
 
 \begin{frame}[shrink=2]{Optimización en dos etapas}
-  \begin{block}{\small Enfoque \textit{downstream}: optimización orientada a la tarea}
-    {\footnotesize \textbf{Entrenamiento del $\beta$-VAE:} no supervisado sobre FC con pérdida ELBO ($\mathcal{L}_{\text{rec}} + \beta \cdot D_{KL}$).\\
-    \textbf{Selección con Optuna:} los hiperparámetros (incl.\ $\beta$) se eligen por el \highlight{MAE de edad} en validación cruzada con XGBoost, no por reconstrucción ni por ELBO aislados. No se fija a priori el balance reconstrucción vs.\ regularización del latente: la búsqueda descubre qué configuración sirve mejor para la tarea downstream.}
+  \begin{block}{\small Optuna: búsqueda automática de hiperparámetros}
+    {\footnotesize Se prueban configuraciones posibles (por ej.\ $\beta$, dimensión latente, profundidad de árboles) y se eligen las que reducen el \highlight{MAE de edad} en validación cruzada. La optimización está orientada a la tarea final, no solo a reconstruir FC.}
   \end{block}
 
   \vspace{0.05cm}
@@ -484,16 +484,16 @@
     arr/.style={-{Stealth[length=2.5mm]}, thick, uncblue},
     lbl/.style={font=\scriptsize, gray}
   ]
-    \node[stage, fill=uncblue!15] (e1) at (0, 0) {\textbf{Etapa 1}\\Optuna $\beta$-VAE};
-    \node[stage, fill=uncblue!15] (e2) at (5.5, 0) {\textbf{Etapa 2}\\Optuna XGBoost};
+    \node[stage, fill=uncblue!15] (e1) at (0, 0) {\textbf{Etapa 1}\\Buscar $\beta$-VAE};
+    \node[stage, fill=uncblue!15] (e2) at (5.5, 0) {\textbf{Etapa 2}\\Buscar XGBoost};
     \node[stage, fill=uncaccent!15] (e3) at (11, 0) {\textbf{Etapa 3}\\Modelo final};
 
-    \node[optstep] (vae1) at (0, -1.8) {Entrenar $\beta$-VAE\\con HP propuestos};
-    \node[frozen] (xgb1) at (0, -3.2) {XGBoost\\(params fijos)};
+    \node[optstep] (vae1) at (0, -1.8) {Entrenar $\beta$-VAE\\con configuración propuesta};
+    \node[frozen] (xgb1) at (0, -3.2) {XGBoost\\(parámetros fijos)};
     \node[lbl] at (0, -4) {$\times$ 70 trials, 5-fold CV};
 
     \node[frozen] (vae2) at (5.5, -1.8) {$\beta$-VAE fijo\\(mejor de Etapa 1)};
-    \node[optstep] (xgb2) at (5.5, -3.2) {Entrenar XGBoost\\con HP propuestos};
+    \node[optstep] (xgb2) at (5.5, -3.2) {Entrenar XGBoost\\con configuración propuesta};
     \node[lbl] at (5.5, -4) {$\times$ 100 trials, 5-fold CV};
 
     \node[optstep] (vae3) at (11, -1.8) {$\beta$-VAE final\\(todo trainval)};
@@ -541,6 +541,15 @@
     \vspace{0.1cm}
     \item \textbf{Entrenamiento solo CN:} explorar viabilidad como biomarcador de envejecimiento acelerado
   \end{enumerate}
+\end{frame}
+
+
+\begin{frame}{Pipeline: resumen animado}
+  \centering
+  \includegraphics[width=0.75\linewidth, height=0.62\textheight, keepaspectratio]{presentacion/07_pipeline_animado/pipeline_poster.png}
+
+  \vspace{0.15cm}
+  {\small Recorrido completo: FC $\to$ $\beta$-VAE $\to$ fusión multimodal $\to$ XGBoost.}
 \end{frame}
 
 
@@ -754,7 +763,8 @@
 
 \begin{frame}{Variables demográficas: educación}{\color{uncyellow}\scriptsize $\blacktriangleright$ Objetivo 2: Variables sociodemográficas}
   \begin{block}{Variable: \texttt{cog\_ed} --- años de educación formal (disponible 74,9\%)}
-    {\small Indicador del nivel socioeconómico. Se analizó su correlación con la brain age gap por grupo diagnóstico.}
+    {\small Pregunta: ¿a más educación, la gap tiende a subir o bajar?\\
+    \textbf{Gap} = edad predicha $-$ edad real; positiva $\rightarrow$ más viejo de lo esperado.}
   \end{block}
 
   \vspace{0.2cm}
@@ -762,7 +772,7 @@
   {\small
   \begin{tabular}{lrrl}
     \toprule
-    \textbf{Grupo} & \textbf{Pearson} $r$ & $\boldsymbol{p}$ & \textbf{Interpretación} \\
+    \textbf{Grupo} & \textbf{$r$ educación--gap} & $\boldsymbol{p}$ & \textbf{Interpretación} \\
     \midrule
     CN  & $-0{,}067$ & $0{,}19$ & tendencia negativa, no significativa \\
     AD  & $+0{,}165$ & $0{,}002$ & significativa ($\uparrow$ educación $\rightarrow$ gap más alta) \\
@@ -787,7 +797,7 @@
 
 \begin{frame}{Variables demográficas: sitio y escáner}{\color{uncyellow}\scriptsize $\blacktriangleright$ Objetivo 2: Variables sociodemográficas}
   \begin{block}{El sitio de adquisición es el mayor confundidor}
-    ANOVA: $F = 8{,}67$,\ $p < 0{,}001$ \quad $\rightarrow$ diferencias significativas entre los 11 centros.
+    {\small ANOVA: compara todos los centros a la vez. $p < 0{,}001$ $\rightarrow$ las gaps cambian según el sitio.}
   \end{block}
 
   \vspace{0.15cm}
@@ -925,94 +935,58 @@
 \begin{frame}{Discusión}
   \begin{itemize}
     \item \textbf{MAE de 5,62} dentro del rango de la literatura para cohortes comparables
-    \begin{itemize}
-      \item Gao et al.: MAE 5,92 con GNN ($N = 471$)
-      \item Franke et al.: MAE 5,00 con RVM ($N = 650$, solo T1w)
-    \end{itemize}
 
     \vspace{0.3cm}
     \item Trabajos con MAE $< 3$ usan cohortes \textbf{mucho mayores} ($N > 5000$)
 
     \vspace{0.3cm}
-    \item La cohorte \highlight{latinoamericana} tiene mayor heterogeneidad (multi-sitio, multi-país)
+    \item La cohorte \highlight{latinoamericana} es multi-sitio y multi-país: más heterogénea, pero más realista
 
     \vspace{0.3cm}
-    \item $R^2 = 0{,}41$: queda varianza por explicar $\rightarrow$ margen de mejora
-
-    \vspace{0.3cm}
-    \item \highlight{CN-only + demográficos: MAE 5,51} --- mejor que el modelo mixto (5,62) y más comparable con la literatura (entrenan solo con sanos)
+    \item $R^2 = 0{,}41$: queda varianza por explicar $\rightarrow$ edad cerebral multifactorial
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Limitaciones}
-  \begin{enumerate}
-    \item \textbf{Tamaño de la cohorte:} $N = 1245$ es modesto comparado con estudios recientes
-
-    \vspace{0.25cm}
-    \item \textbf{Heterogeneidad multi-sitio:} sin armonización entre centros (ComBat)
-
-    \vspace{0.25cm}
-    \item \textbf{Resolución del atlas:} AAL 116 regiones es grueso; atlas finos podrían capturar patrones más sutiles
-
-    \vspace{0.25cm}
-    \item \textbf{Sin modelos end-to-end:} no se comparó con 3D CNN ni GNN
-
-    \vspace{0.25cm}
-    \item \textbf{Exploración del $\beta$-VAE:} solo 70 trials de Optuna sobre un espacio combinatorio vasto; una mejor configuración podría superar a PCA
-  \end{enumerate}
-\end{frame}
-
-\begin{frame}{Conclusiones}
-  \begin{enumerate}
-    \item Pipeline multimodal (FC + T1w) con MAE de \highlight{5,62 años}; con educación y sitio: \highlight{MAE 5,17}. CN-only + demográficos: \highlight{MAE 5,51}
-
-    \vspace{0.18cm}
-    \item La integración de ambas modalidades mejora la predicción\\$\rightarrow$ las fuentes son \highlight{complementarias}
-
-    \vspace{0.18cm}
-    \item $\beta$-VAE $\approx$ PCA con XGBoost optimizado; la \highlight{reducción} es clave: supera a FC crudo (5,62 vs.\ 6,00)
-
-    \vspace{0.18cm}
-    \item El \highlight{sitio de adquisición} es el mayor confundidor demográfico ($\sim$8 años de rango); armonización necesaria
-
-    \vspace{0.18cm}
-    \item CN-only + demográficos: \highlight{MAE 5,51} (mejor que mixto) con gaps positivas en AD y FTD $\rightarrow$ \highlight{prometedor} como biomarcador
-
-    \vspace{0.18cm}
-    \item Evaluado sobre cohorte \highlight{latinoamericana multicéntrica}; resultados relevantes en contexto LAC
-  \end{enumerate}
-\end{frame}
-
-\begin{frame}{Trabajo futuro}
+\begin{frame}{Limitaciones y próximos pasos}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      \textbf{Datos:}
+      \textbf{Limitación}
       \begin{itemize}
-        \item Ampliar cohorte (especialmente CN, $N > 2000$)
-        \item \textbf{Armonización multi-sitio} (ComBat, NeuroHarmonize)
-        \item Atlas de mayor resolución
-        \item Más features estructurales (materia blanca, LCR)
-        \item Análisis demográfico ampliado (ingresos, ocupación, estatus socioeconómico y edad de inicio ---ao---)
+        \item Cohorte modesta para brain age
+        \item Heterogeneidad multi-sitio
+        \item Atlas AAL relativamente grueso
+        \item Sin comparación end-to-end
+        \item Búsqueda limitada del $\beta$-VAE
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \textbf{Modelos:}
+      \textbf{Próximo paso}
       \begin{itemize}
-        \item Comparar optimización downstream vs.\ reconstrucción pura
-        \item Modelos end-to-end (GNN, 3D CNN)
-        \item Datos longitudinales
-        \item Otras modalidades (DTI, grosor cortical)
+        \item Más sujetos, sobre todo CN
+        \item Armonización (ComBat)
+        \item Atlas de mayor resolución
+        \item GNN / 3D CNN
+        \item Más trials y espacios de búsqueda
       \end{itemize}
     \end{column}
   \end{columns}
 \end{frame}
 
+\begin{frame}{Conclusiones}
+  \begin{enumerate}
+    \item Pipeline multimodal (FC + T1w) con MAE de \highlight{5,62 años}; con educación y sitio: \highlight{MAE 5,17}
 
-\begin{frame}{Agradecimientos}
-  \vspace{2.5cm}
-  \centering
-  {\large Agradecimientos}
+    \vspace{0.35cm}
+    \item FC y T1w son \highlight{complementarias}; la reducción de dimensionalidad es clave frente a FC crudo
+
+    \vspace{0.35cm}
+    \item CN-only + demográficos: gaps positivas en AD y FTD; prometedor como biomarcador, pero requiere más controles y mejor control de heterogeneidad
+
+    \vspace{0.35cm}
+    \item Evaluado en una cohorte \highlight{latinoamericana multicéntrica}, poco representada en la literatura
+  \end{enumerate}
 \end{frame}
+
 
 \begin{frame}{}
   \vspace{2cm}

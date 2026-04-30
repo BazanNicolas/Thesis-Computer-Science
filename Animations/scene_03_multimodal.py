@@ -2,7 +2,7 @@
 Escena 3 — Integración Multimodal: VAE embeddings + T1w → 180 features.
 
 Muestra:
-  • Strip de embeddings z del VAE (64 dims, color latente/púrpura).
+  • Strip de embeddings μ del VAE (64 dims, color latente/púrpura).
   • Strip de features T1w estructurales (116 dims, teal).
   • Símbolo "+" y flecha de concatenación.
   • Strip combinado (180 features) con brace.
@@ -34,14 +34,14 @@ class MultimodalFusion(Scene):
         def make_strip(n_cells, total, color, seed_offset=0):
             vs = rng.uniform(-0.9, 0.9, n_cells + 1)
             cells = VGroup(*[
-                feat_cell(float(vs[i]), f"z{i+1}" if color == C_LAT else f"t{i+1}",
+                feat_cell(float(vs[i]), f"μ{i+1}" if color == C_LAT else f"t{i+1}",
                           color)
                 for i in range(n_cells)
             ])
             cells.arrange(RIGHT, buff=0.09)
             dots = Text("·  ·  ·", font_size=20, color=C_DIM)
             last = feat_cell(float(vs[-1]),
-                             f"z{total}" if color == C_LAT else f"t{total}",
+                             f"μ{total}" if color == C_LAT else f"t{total}",
                              color)
             row = VGroup(cells, dots, last)
             row.arrange(RIGHT, buff=0.14)
@@ -52,7 +52,7 @@ class MultimodalFusion(Scene):
             title.next_to(row, UP, buff=0.14)
             return VGroup(title, row)
 
-        # --- Strip VAE z: 64 ---
+        # --- Strip VAE mu: 64 ---
         z_row = make_strip(3, 64, C_LAT)
         z_block = titled_strip(z_row, "VAE Embeddings  μ  (64 dims)", C_LAT)
         z_block.move_to([-3.0, 0.5, 0])
@@ -91,7 +91,7 @@ class MultimodalFusion(Scene):
         zvals = rng2.uniform(-0.9, 0.9, 4)
         tvals = rng2.uniform(-0.9, 0.9, 4)
 
-        z_cells_c = VGroup(*[feat_cell(float(zvals[i]), f"z{i+1}", C_LAT)
+        z_cells_c = VGroup(*[feat_cell(float(zvals[i]), f"μ{i+1}", C_LAT)
                               for i in range(3)])
         z_cells_c.arrange(RIGHT, buff=0.09)
         zdots = Text("·", font_size=22, color=C_DIM)

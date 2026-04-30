@@ -34,7 +34,7 @@ class OptunaXGBScene(Scene):
                      stroke_color=C_DIM, stroke_width=0.7)
         self.play(Create(hline), run_time=0.4)
 
-        # Top row: frozen VAE -> Z -> Optuna -> Params XGB
+        # Top row: frozen VAE -> mu -> Optuna -> Params XGB
         vae_frozen = RoundedRectangle(
             corner_radius=0.12, width=1.8, height=0.75,
             fill_color=C_VAE, fill_opacity=0.08,
@@ -110,7 +110,7 @@ class OptunaXGBScene(Scene):
         # Steps inside fold
         step_y = -0.65
 
-        feat_box = rounded_box("Z + T1w", "180 feats", C_OUT, width=1.6, height=0.6)
+        feat_box = rounded_box("μ + T1w", "180 feats", C_OUT, width=1.6, height=0.6)
         feat_box.set_y(step_y).set_x(-3.0)
 
         xgb_step = RoundedRectangle(
