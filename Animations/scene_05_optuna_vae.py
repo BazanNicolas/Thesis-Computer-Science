@@ -64,7 +64,7 @@ class OptunaVAEScene(Scene):
         )
         fold_frame.move_to(DOWN * 0.7)
 
-        fold_title = Text("Para cada fold k = 1 ... 5", font_size=13,
+        fold_title = Text("CV 5-fold: train/val rotativo", font_size=13,
                           color=C_DIM, slant=ITALIC)
         fold_title.next_to(fold_frame, UP, buff=0.08)
         fold_title.align_to(fold_frame, LEFT).shift(RIGHT * 0.2)
@@ -85,7 +85,7 @@ class OptunaVAEScene(Scene):
         vae_step = rounded_box("Entrenar VAE", "fold train", C_VAE, width=2.0, height=0.65)
         vae_step.set_y(step_y).set_x(-4.0)
 
-        emb_step = rounded_box("Extraer μ", "embeddings", C_LAT, width=1.7, height=0.65)
+        emb_step = rounded_box("Extraer μ", "train + val", C_LAT, width=1.7, height=0.65)
         emb_step.set_y(step_y).set_x(-1.4)
 
         xgb_step = RoundedRectangle(

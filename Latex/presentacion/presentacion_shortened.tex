@@ -511,9 +511,17 @@
   \end{tikzpicture}
   \shorthandon{>}
 
-  \vspace{0.1cm}
-  {\small \textbf{Config.\ óptima:} $\beta = 0{,}057$; encoder $6670 \to 512 \to 64$; ELU; warmup 73 épocas; $\mathcal{L}_{\text{rec}} =$ MAE.\\
-  Vector final: 64 (FC) + 116 (T1w) = \highlight{180 features}.}
+  \vspace{0.08cm}
+  {\scriptsize En cada trial se reutilizan los mismos 5 folds de trainval y se reporta el \highlight{MAE promedio} de validación.\\
+  \textbf{Config.\ óptima:} $\beta = 0{,}057$; encoder $6670 \to 512 \to 64$; ELU; warmup 73. Vector final: \highlight{180 features}.}
+\end{frame}
+
+\begin{frame}{Pipeline: resumen animado}
+  \centering
+  \includegraphics[width=0.75\linewidth, height=0.62\textheight, keepaspectratio]{presentacion/07_pipeline_animado/pipeline_poster.png}
+
+  \vspace{0.15cm}
+  {\small Recorrido completo: FC $\to$ $\beta$-VAE $\to$ fusión multimodal $\to$ XGBoost.}
 \end{frame}
 
 \begin{frame}{Estrategia de evaluación}
@@ -541,15 +549,6 @@
     \vspace{0.1cm}
     \item \textbf{Entrenamiento solo CN:} explorar viabilidad como biomarcador de envejecimiento acelerado
   \end{enumerate}
-\end{frame}
-
-
-\begin{frame}{Pipeline: resumen animado}
-  \centering
-  \includegraphics[width=0.75\linewidth, height=0.62\textheight, keepaspectratio]{presentacion/07_pipeline_animado/pipeline_poster.png}
-
-  \vspace{0.15cm}
-  {\small Recorrido completo: FC $\to$ $\beta$-VAE $\to$ fusión multimodal $\to$ XGBoost.}
 \end{frame}
 
 

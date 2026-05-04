@@ -86,7 +86,7 @@ class OptunaXGBScene(Scene):
         )
         fold_frame.move_to(DOWN * 0.7)
 
-        fold_title = Text("Para cada fold k = 1 ... 5", font_size=13,
+        fold_title = Text("CV 5-fold: train/val rotativo", font_size=13,
                           color=C_DIM, slant=ITALIC)
         fold_title.next_to(fold_frame, UP, buff=0.08)
         fold_title.align_to(fold_frame, LEFT).shift(RIGHT * 0.2)
@@ -119,9 +119,9 @@ class OptunaXGBScene(Scene):
             stroke_color=C_XGB, stroke_width=2.0,
         )
         xgb_step.set_y(step_y).set_x(0.0)
-        xgb_lbl2 = Text("XGBoost", font_size=13, color=C_XGB, weight=BOLD)
+        xgb_lbl2 = Text("Entrenar XGB", font_size=13, color=C_XGB, weight=BOLD)
         xgb_lbl2.move_to(xgb_step.get_center() + UP * 0.08)
-        xgb_sub2 = Text("params variables", font_size=9, color=C_XGB)
+        xgb_sub2 = Text("fold train", font_size=9, color=C_XGB)
         xgb_sub2.next_to(xgb_lbl2, DOWN, buff=0.03)
 
         mae_box = rounded_box("MAE", "fold val", C_OUT, width=1.3, height=0.6)
