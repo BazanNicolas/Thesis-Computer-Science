@@ -71,6 +71,23 @@ class OptunaVAEScene(Scene):
 
         self.play(Create(fold_frame), FadeIn(fold_title), run_time=0.8)
 
+        fold_cells = VGroup()
+        for i in range(5):
+            cell = Rectangle(
+                width=0.55, height=0.20,
+                fill_color=C_BLUE, fill_opacity=0.22,
+                stroke_color=C_DIM, stroke_width=0.8,
+            )
+            fold_cells.add(cell)
+        fold_cells.arrange(RIGHT, buff=0.08)
+        fold_cells.move_to(fold_frame.get_top() + DOWN * 0.42 + RIGHT * 2.9)
+        fold_lbl = Text("fold val rota", font_size=9, color=C_DIM)
+        fold_lbl.next_to(fold_cells, LEFT, buff=0.15)
+        val_marker = SurroundingRectangle(
+            fold_cells[0], color=C_GOLD, stroke_width=1.8, buff=0.03,
+        )
+        self.play(FadeIn(fold_lbl), FadeIn(fold_cells), Create(val_marker), run_time=0.6)
+
         arr_down = Arrow(
             params_box.get_bottom(),
             fold_frame.get_top() + LEFT * 2.5 + DOWN * 0.05,
@@ -84,6 +101,12 @@ class OptunaVAEScene(Scene):
 
         vae_step = rounded_box("Entrenar VAE", "fold train", C_VAE, width=2.0, height=0.65)
         vae_step.set_y(step_y).set_x(-4.0)
+
+        fc_mini = rounded_box("FC", "6670", C_BLUE, width=0.9, height=0.42)
+        fc_mini.set_y(step_y - 0.65).set_x(-4.0)
+        a_fc = Arrow(fc_mini.get_top(), vae_step.get_bottom(),
+                     color=C_BLUE, stroke_width=1.5, buff=0.05,
+                     max_tip_length_to_length_ratio=0.12)
 
         emb_step = rounded_box("Extraer μ", "train + val", C_LAT, width=1.7, height=0.65)
         emb_step.set_y(step_y).set_x(-1.4)
@@ -120,6 +143,7 @@ class OptunaVAEScene(Scene):
                    max_tip_length_to_length_ratio=0.12)
 
         self.play(FadeIn(vae_step, shift=RIGHT * 0.1), run_time=0.7)
+        self.play(FadeIn(fc_mini), GrowArrow(a_fc), run_time=0.5)
         self.play(GrowArrow(a1), run_time=0.5)
         self.play(FadeIn(emb_step, shift=RIGHT * 0.1), run_time=0.7)
         self.play(GrowArrow(a2), run_time=0.5)
@@ -133,21 +157,33 @@ class OptunaVAEScene(Scene):
         self.wait(0.8)
 
         # Fold cycling with animated arrow
+        fold_maes = [6.8, 6.1, 6.5, 6.3, 6.4]
         fold_counter = Text("k = 1", font_size=15, color=C_GOLD, weight=BOLD)
         fold_counter.move_to(fold_frame.get_corner(UR) + LEFT * 0.5 + DOWN * 0.25)
-        self.play(FadeIn(fold_counter), run_time=0.5)
+        fold_error = Text(f"MAE = {fold_maes[0]:.1f}", font_size=12, color=C_OUT)
+        fold_error.next_to(fold_counter, DOWN, buff=0.10)
+        self.play(FadeIn(fold_counter), FadeIn(fold_error), run_time=0.5)
         self.wait(0.4)
 
         for k in range(2, 6):
             new_counter = Text(f"k = {k}", font_size=15, color=C_GOLD, weight=BOLD)
             new_counter.move_to(fold_counter)
+            new_error = Text(f"MAE = {fold_maes[k - 1]:.1f}", font_size=12, color=C_OUT)
+            new_error.move_to(fold_error)
+            new_marker = SurroundingRectangle(
+                fold_cells[k - 1], color=C_GOLD, stroke_width=1.8, buff=0.03,
+            )
             self.play(
                 FadeOut(fold_counter, shift=UP * 0.15),
                 FadeIn(new_counter, shift=UP * 0.15),
+                FadeOut(fold_error, shift=UP * 0.10),
+                FadeIn(new_error, shift=UP * 0.10),
+                Transform(val_marker, new_marker),
                 Flash(mae_step, color=C_OUT, flash_radius=0.35, line_length=0.12),
                 run_time=0.5,
             )
             fold_counter = new_counter
+            fold_error = new_error
             self.wait(0.2)
 
         self.wait(0.5)
@@ -179,7 +215,7 @@ class OptunaVAEScene(Scene):
             color=C_GOLD, stroke_width=1.5, buff=0,
             max_tip_length_to_length_ratio=0.5,
         )
-        report_lbl = Text("mean(MAE)", font_size=11, color=C_GOLD)
+        report_lbl = Text("mean(MAE) = 6.42", font_size=11, color=C_GOLD)
         report_lbl.move_to([1.0, above_y + 0.13, 0])
 
         self.play(Create(fb_right), run_time=0.4)
@@ -188,23 +224,4 @@ class OptunaVAEScene(Scene):
         self.play(GrowArrow(fb_down), run_time=0.5)
         self.wait(0.8)
 
-        # Output
-        divider = Line(LEFT * 6.8 + DOWN * 2.35, RIGHT * 6.8 + DOWN * 2.35,
-                       stroke_color=C_DIM, stroke_width=0.8)
-        self.play(Create(divider), run_time=0.4)
-
-        result = VGroup(
-            Text("Mejor configuracion VAE:", font_size=16, color=C_TEXT),
-            Text("latent=64, hidden=[512], beta=0.057, lr=0.0019, warmup=73",
-                 font_size=13, color=C_VAE),
-            Text("CV MAE = 6.43 anios", font_size=14, color=C_GOLD),
-        )
-        result.arrange(DOWN, buff=0.08, aligned_edge=LEFT)
-        result.move_to(DOWN * 3.05)
-
-        self.play(
-            LaggedStart(*[FadeIn(r, shift=UP * 0.1) for r in result],
-                        lag_ratio=0.35),
-            run_time=1.5,
-        )
-        self.wait(4.0)
+        self.wait(2.5)

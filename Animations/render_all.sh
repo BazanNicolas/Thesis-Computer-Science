@@ -40,7 +40,7 @@ case "$QUALITY" in
 esac
 
 echo ""
-echo "Combinando escenas individuales con ffmpeg..."
+echo "Combinando Optuna + escenas del pipeline con ffmpeg..."
 
 # Crear lista de archivos (rutas relativas a Animations/)
 LIST_FILE="media/concat_list.txt"
@@ -48,12 +48,12 @@ mkdir -p media
 ANIM_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 cat > "$LIST_FILE" <<EOF
+file '${ANIM_DIR}/media/videos/scene_05_optuna_vae/$RES/OptunaVAEScene.mp4'
+file '${ANIM_DIR}/media/videos/scene_06_optuna_xgb/$RES/OptunaXGBScene.mp4'
 file '${ANIM_DIR}/media/videos/scene_01_fc/$RES/FCToFeatures.mp4'
 file '${ANIM_DIR}/media/videos/scene_02_vae/$RES/BetaVAEScene.mp4'
 file '${ANIM_DIR}/media/videos/scene_03_multimodal/$RES/MultimodalFusion.mp4'
 file '${ANIM_DIR}/media/videos/scene_04_xgboost/$RES/XGBoostPrediction.mp4'
-file '${ANIM_DIR}/media/videos/scene_05_optuna_vae/$RES/OptunaVAEScene.mp4'
-file '${ANIM_DIR}/media/videos/scene_06_optuna_xgb/$RES/OptunaXGBScene.mp4'
 EOF
 
 COMBINED="media/brain_age_pipeline_combined.mp4"

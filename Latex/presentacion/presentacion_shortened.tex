@@ -313,8 +313,17 @@
       {\small \textbf{VAE:} cada entrada $\to$ una \highlight{distribución} $(\mu, \sigma)$. Introduce una parte probabilística controlada; el truco de reparametrización permite entrenarla.}
 
       \vspace{0.1cm}
-      {\small \textbf{$\beta$-VAE:} $\beta$ pondera reconstrucción vs.\ regularización del latente.\\
-      $\beta \to 0$ \highlight{recupera el AE clásico}.}
+      {\footnotesize \textbf{Pérdida de entrenamiento:}}
+      \vspace{-0.12cm}
+      \[
+      \resizebox{0.6\linewidth}{!}{$
+      \mathcal{L} =
+      \underbrace{\mathcal{L}_{\mathrm{rec}}(x,\tilde{x})}_{\text{\scriptsize reconstrucción}}
+      + \beta \cdot
+      \underbrace{D_{\mathrm{KL}}(q(z|x)\,\|\,p(z))}_{\text{\scriptsize regularización latente}}
+      $}
+      \]
+      \vspace{-0.18cm}
 
       \vspace{0.15cm}
       {\small \textbf{En este trabajo:}
@@ -387,7 +396,8 @@
         \node[decblock, right=0.8cm of z] (dec) {Decoder\\[-2pt]{\tiny $p(x \mid z)$}};
         \node[right=0.5cm of dec] (xhat) {$\tilde{x}$};
 
-        \node[below=0.5cm of z, font=\tiny] (eps) {muestreo};
+        \node[below=0.55cm of z, font=\tiny] (eps) {$\epsilon \sim \mathcal{N}(0,I)$};
+        \node[above=0.05cm of z, font=\tiny] {$z = \mu + \sigma \odot \epsilon$};
 
         \draw[arr] (x) -- (enc);
         \draw[arr] (enc) |- (mu);
@@ -398,7 +408,6 @@
         \draw[arr] (z) -- (dec);
         \draw[arr] (dec) -- (xhat);
 
-        \node[above=0.05cm of z, font=\tiny\itshape] {parte probabilística};
       \end{tikzpicture}
       \shorthandon{>}
 
@@ -857,9 +866,10 @@
     \bottomrule
   \end{tabular}}
 
-  \vspace{0.3cm}
-  {\small MAE \highlight{5,17}: mejor configuración del trabajo. Mejora de \textbf{0,45 años} sobre el baseline.\\
-  Las features demográficas aportan información \highlight{complementaria} a la neuroimagen; ambas aparecen en el top 20 de importancia.}
+  \vspace{0.25cm}
+  \begin{block}{Lectura predictiva}
+    {\small MAE \highlight{5,17}: mejor configuración del trabajo. Mejora de \textbf{0,45 años} sobre el baseline.}
+  \end{block}
 
   \objectivetracker{\objdone}{\objdone}{\objpend}
 \end{frame}
@@ -923,7 +933,7 @@
 
   \vspace{0.2cm}
   {\small Gaps \highlight{consistentemente positivas} en AD y FTD $\rightarrow$ dirección esperada en neurodegeneración.\\
-  Resultado prometedor: con más datos CN, el pipeline podría funcionar como biomarcador.}
+  Resultado \highlight{prometedor}, pero no concluyente sin más CN y mejor control multi-sitio.}
 
   \objectivetracker{\objdone}{\objdone}{\objdone}
 \end{frame}
@@ -933,57 +943,44 @@
 
 \begin{frame}{Discusión}
   \begin{itemize}
-    \item \textbf{MAE de 5,62} dentro del rango de la literatura para cohortes comparables
+    \item Rendimiento dentro del rango esperable para cohortes comparables en tamaño y modalidad
 
     \vspace{0.3cm}
-    \item Trabajos con MAE $< 3$ usan cohortes \textbf{mucho mayores} ($N > 5000$)
+    \item Trabajos con MAE $< 3$ suelen usar cohortes \textbf{mucho mayores} y más homogéneas
 
     \vspace{0.3cm}
-    \item La cohorte \highlight{latinoamericana} es multi-sitio y multi-país: más heterogénea, pero más realista
+    \item RedLaT aporta una cohorte \highlight{latinoamericana multicéntrica}, poco representada en la literatura
 
     \vspace{0.3cm}
     \item $R^2 = 0{,}41$: queda varianza por explicar $\rightarrow$ edad cerebral multifactorial
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Limitaciones y próximos pasos}
+\begin{frame}[shrink=4]{Limitaciones, próximos pasos y cierre}
   \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-      \textbf{Limitación}
-      \begin{itemize}
-        \item Cohorte modesta para brain age
-        \item Heterogeneidad multi-sitio
-        \item Atlas AAL relativamente grueso
-        \item Sin comparación end-to-end
-        \item Búsqueda limitada del $\beta$-VAE
-      \end{itemize}
+    \begin{column}{0.50\textwidth}
+      \textbf{Limitación $\rightarrow$ próximo paso}
+      \vspace{0.05cm}
+      {\small
+      \begin{itemize}\setlength{\itemsep}{2pt}
+        \item Cohorte modesta, sobre todo CN $\rightarrow$ más sujetos control
+        \item Efectos de sitio $\rightarrow$ armonización ComBat / validación por sitio
+        \item Atlas AAL grueso $\rightarrow$ atlas de mayor resolución
+        \item Modelos modulares $\rightarrow$ comparar con GNN / 3D CNN
+        \item Búsqueda VAE acotada $\rightarrow$ más trials y espacio ampliado
+      \end{itemize}}
     \end{column}
-    \begin{column}{0.48\textwidth}
-      \textbf{Próximo paso}
-      \begin{itemize}
-        \item Más sujetos, sobre todo CN
-        \item Armonización (ComBat)
-        \item Atlas de mayor resolución
-        \item GNN / 3D CNN
-        \item Más trials y espacios de búsqueda
-      \end{itemize}
+    \begin{column}{0.47\textwidth}
+      \textbf{Conclusiones por objetivo}
+      \vspace{0.05cm}
+      {\small
+      \begin{enumerate}\setlength{\itemsep}{5pt}
+        \item \textbf{Predicción:} FC + T1w es viable; con demográficos alcanza \highlight{MAE 5,17}.
+        \item \textbf{Sociodemográficos:} educación y sitio modulan la gap y ayudan a calibrar la predicción.
+        \item \textbf{Biomarcador:} CN-only + demográficos es prometedor, pero requiere más CN y control multi-sitio.
+      \end{enumerate}}
     \end{column}
   \end{columns}
-\end{frame}
-
-\begin{frame}{Conclusiones}
-  \begin{enumerate}
-    \item Pipeline multimodal (FC + T1w) con MAE de \highlight{5,62 años}; con educación y sitio: \highlight{MAE 5,17}
-
-    \vspace{0.35cm}
-    \item FC y T1w son \highlight{complementarias}; la reducción de dimensionalidad es clave frente a FC crudo
-
-    \vspace{0.35cm}
-    \item CN-only + demográficos: gaps positivas en AD y FTD; prometedor como biomarcador, pero requiere más controles y mejor control de heterogeneidad
-
-    \vspace{0.35cm}
-    \item Evaluado en una cohorte \highlight{latinoamericana multicéntrica}, poco representada en la literatura
-  \end{enumerate}
 \end{frame}
 
 
