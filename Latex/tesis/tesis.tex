@@ -41,6 +41,7 @@
 \usepackage{float}
 \usepackage{array}
 \usepackage{setspace}
+\usepackage{pdfpages}
 
 % Rutas de figuras e inputs relativas a Latex/ (un nivel arriba)
 \graphicspath{{../}}
@@ -261,29 +262,7 @@ Universidad o Institución.
 \bibliographystyle{unsrt}
 \bibliography{../tesis}
 
-% Página de aprobación del tribunal
 \cleardoublepage
-\thispagestyle{empty}
-\vspace*{2cm}
-\begin{center}
-    {\large La versión final de este Trabajo Especial, aquí presentada, fue evaluada\\[0.3em]
-    y aprobada por el tribunal examinador.}
-\end{center}
-
-\vspace{4cm}
-
-\begin{center}
-    \rule{5.5cm}{0.5pt}\\[0.3em]
-    Presidente
-\end{center}
-
-\vspace{3cm}
-
-\begin{center}
-\begin{tabular}{p{6cm} p{6cm}}
-    \centering\rule{5.5cm}{0.5pt} & \centering\rule{5.5cm}{0.5pt} \tabularnewline
-    \centering Vocal 1 & \centering Vocal 2 \tabularnewline
-\end{tabular}
-\end{center}
+\includepdf[pages=-,pagecommand={\thispagestyle{empty}}]{../00_tapa/aprobacion_tribunal.pdf}
 
 \end{document}
