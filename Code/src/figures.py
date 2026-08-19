@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 from .vae_callbacks import pearsonr_per_sample
 
@@ -199,7 +200,11 @@ def plot_pred_scatter(y_true, y_pred, out_path: Path, title: str) -> None:
 
 def plot_feature_importance(model, feature_names: list[str], out_path: Path,
                             top_k: int = 20, *,
-                            use_readable_names: bool = True) -> None:
+                            use_readable_names: bool = True,
+                            ytick_fontsize: int = 15,
+                            label_fontsize: int = 13,
+                            title_fontsize: int = 14,
+                            figsize: tuple[float, float] = (6.8, 6.8)) -> None:
     """Horizontal bar chart of top-k XGBoost feature importances.
 
     When *use_readable_names* is True (the default), feature names are
@@ -217,9 +222,12 @@ def plot_feature_importance(model, feature_names: list[str], out_path: Path,
 
     vals = importances[idx][::-1]
 
-    plt.figure(figsize=(8, 6))
-    plt.barh(range(len(idx)), vals)
-    plt.yticks(range(len(idx)), names, fontsize=8)
-    plt.xlabel("Gain")
-    plt.title(f"Top-{top_k} feature importances")
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.barh(range(len(idx)), vals)
+    ax.set_yticks(range(len(idx)))
+    ax.set_yticklabels(names, fontsize=ytick_fontsize)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
+    ax.tick_params(axis="x", labelsize=label_fontsize)
+    ax.set_xlabel("Gain", fontsize=label_fontsize)
+    ax.set_title(f"Top-{top_k} feature importances", fontsize=title_fontsize)
     _savefig(out_path)
